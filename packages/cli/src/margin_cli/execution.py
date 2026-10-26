@@ -1,17 +1,29 @@
-"""Running an agent from the CLI: LLM setup, progress display and Ctrl+C handling."""
+"""Running an agent from the CLI: LLM setup, progress, questions and Ctrl+C handling."""
 
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
-from typing import Any
+import contextlib
+import sys
+import threading
+from collections.abc import Callable, Iterator
+from typing import IO, Any
 
-from margin_core import AgentResult, BaseAgent, ProgressEvent, RunContext
+from margin_core import (
+    AgentResult,
+    BaseAgent,
+    NoAnswerError,
+    ProgressEvent,
+    Question,
+    QuestionBatch,
+    RunContext,
+)
 from margin_core.config import Settings
 from margin_core.errors import LLMError
 from margin_core.llm import LLMClient, create_llm
 from pydantic import BaseModel
 from rich.console import Console
+from rich.markup import escape
 
 CANCEL_GRACE_S = 5.0
 """How long a cancelled agent gets to stop on its own before its task is cancelled."""
@@ -96,3 +108,162 @@ class ProgressDisplay:
         if self._status is not None:
             self._status.__exit__(None, None, None)
             self._status = None
+
+    @contextlib.contextmanager
+    def paused(self) -> Iterator[None]:
+        """Hide the spinner while something else uses the terminal."""
+        status = self._status
+        if status is not None:
+            status.stop()
+        try:
+            yield
+        finally:
+            if status is not None and self._status is status:
+                status.start()
+
+
+class TerminalQuestions:
+    """Answers an agent's questions by asking in the terminal.
+
+    Prompts go to stderr, so stdout is still only the report. Lines are read on a daemon
+    thread, so Ctrl+C cancels the run even while a prompt is waiting.
+    """
+
+    def __init__(
+        self,
+        console: Console,
+        display: ProgressDisplay | None = None,
+        stream: IO[str] | None = None,
+    ) -> None:
+        self._console = console
+        self._display = display
+        self._stream = stream
+
+    async def __call__(self, batch: QuestionBatch) -> dict[str, Any]:
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[dict[str, Any]] = loop.create_future()
+
+        def settle(answers: dict[str, Any] | None, error: BaseException | None) -> None:
+            if future.done():
+                return
+            if error is not None:
+                future.set_exception(error)
+            else:
+                future.set_result(answers or {})
+
+        def work() -> None:
+            answers: dict[str, Any] | None = None
+            error: BaseException | None = None
+            try:
+                answers = self.ask_batch(batch)
+            except BaseException as exc:  # noqa: BLE001 - handed to the run
+                error = exc
+            with contextlib.suppress(RuntimeError):  # the run ended and its loop is gone
+                loop.call_soon_threadsafe(settle, answers, error)
+
+        paused = self._display.paused() if self._display else contextlib.nullcontext()
+        with paused:
+            threading.Thread(target=work, name="margin-questions", daemon=True).start()
+            return await future
+
+    def ask_batch(self, batch: QuestionBatch) -> dict[str, Any]:
+        """Ask every question in turn (blocking). Raises :class:`NoAnswerError` at end of input."""
+        out = self._console
+        out.print()
+        out.print(f"[bold]{escape(batch.title)}[/]", highlight=False)
+        if batch.detail:
+            out.print(escape(batch.detail), highlight=False)
+        answers: dict[str, Any] = {}
+        section: str | None = None
+        for question in batch.questions:
+            if question.section and question.section != section:
+                section = question.section
+                out.print(f"\n[bold underline]{escape(section)}[/]", highlight=False)
+            try:
+                answers[question.id] = self._ask(question)
+            except EOFError:
+                raise NoAnswerError("The input ended before the questions were answered.") from None
+        out.print()
+        return answers
+
+    def _ask(self, question: Question) -> Any:
+        out = self._console
+        out.print(f"\n[bold]{escape(question.prompt)}[/]", highlight=False)
+        if question.detail:
+            out.print(f"  [dim]{escape(question.detail)}[/]", highlight=False)
+        for ev in question.evidence:
+            where = f"{ev.location}: " if ev.location else ""
+            out.print(
+                f"  [dim]· {escape(ev.kind)}: {escape(where + ev.detail)}[/]", highlight=False
+            )
+        suggested = question.default if isinstance(question.default, list) else [question.default]
+        for n, choice in enumerate(question.choices, 1):
+            line = f"  {n}) {escape(choice.label)}"
+            if choice.detail:
+                line += f" [dim]- {escape(choice.detail)}[/]"
+            if any(choice.value == s and type(choice.value) is type(s) for s in suggested):
+                line += " [cyan](suggested)[/]"
+            out.print(line, highlight=False)
+
+        while True:
+            raw = self._read(self._prompt(question)).strip()
+            try:
+                value = question.default if not raw else _parse(question, raw)
+                return question.check(value)
+            except ValueError as exc:
+                out.print(f"  [red]{escape(str(exc))}[/]", highlight=False)
+
+    def _prompt(self, question: Question) -> str:
+        if question.kind == "text":
+            hint = "Your answer"
+        elif question.kind == "multi_choice":
+            hint = "Numbers, separated by commas" + ("" if question.required else ", or none")
+        else:
+            hint = f"Choose 1-{len(question.choices)}"
+            if question.allow_other:
+                hint += ", or type your own"
+        if question.default not in (None, []):
+            default = question.default if isinstance(question.default, list) else [question.default]
+            numbers = [
+                str(n)
+                for n, c in enumerate(question.choices, 1)
+                if any(c.value == d and type(c.value) is type(d) for d in default)
+            ]
+            shown = ",".join(numbers) if question.choices and numbers else str(question.default)
+            hint += f" [{shown}]"
+        elif not question.required:
+            hint += " (optional)"
+        return f"[cyan]{escape(hint)}:[/] "
+
+    def _read(self, prompt: str) -> str:
+        self._console.print(prompt, end="", highlight=False)
+        line = (self._stream or sys.stdin).readline()
+        if not line:
+            raise EOFError
+        return line.rstrip("\r\n")
+
+
+def _parse(question: Question, raw: str) -> Any:
+    """Turn what was typed into a value for ``question.check``."""
+    if question.kind == "text":
+        return raw
+    if question.kind == "multi_choice":
+        if raw.lower() in {"none", "-"}:
+            return []
+        return [_pick(question, part.strip()) for part in raw.split(",") if part.strip()]
+    try:
+        return _pick(question, raw)
+    except ValueError:
+        if question.allow_other:
+            return raw
+        raise
+
+
+def _pick(question: Question, typed: str) -> Any:
+    """The value of the choice ``typed`` names: by number, label or value."""
+    if typed.isdigit() and 1 <= int(typed) <= len(question.choices):
+        return question.choices[int(typed) - 1].value
+    for choice in question.choices:
+        if typed.casefold() in {choice.label.casefold(), str(choice.value).casefold()}:
+            return choice.value
+    raise ValueError(f"Type a number from 1 to {len(question.choices)}")

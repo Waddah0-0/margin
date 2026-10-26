@@ -39,6 +39,24 @@ describe("toMarkdown", () => {
     expect(md).toContain("| Duration | 1.23s |");
     expect(md).toContain("| Tokens (in/out) | 10/5 |");
     expect(md).toContain("| Started | 2026-10-19T10:00:00Z |");
+    expect(md).not.toContain("## Answers");
     expect(md.endsWith("\n")).toBe(true);
+  });
+
+  it("lists the answers and who gave them", () => {
+    const asked: AgentResult = {
+      ...result,
+      metadata: {
+        ...result.metadata,
+        answers: [
+          { question_id: "a", prompt: "Date format?", value: "dmy", label: "DD/MM", source: "user" },
+          { question_id: "b", prompt: "Grain?", value: "order", label: "An order", source: "default" },
+        ],
+      },
+    };
+    const md = toMarkdown(asked);
+    expect(md).toContain("## Answers\n\n| Question | Answer | Given by |\n|---|---|---|");
+    expect(md).toContain("| Date format? | DD/MM | you |");
+    expect(md).toContain("| Grain? | An order | default, not confirmed |");
   });
 });

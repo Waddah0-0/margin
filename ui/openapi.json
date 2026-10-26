@@ -156,6 +156,113 @@
         "title": "AgentResult",
         "type": "object"
       },
+      "Answer": {
+        "additionalProperties": false,
+        "description": "How one question was answered, kept with the result so every choice can be traced.\n\n``source`` says who decided: ``user`` (answered when asked), ``preset`` (given with the\nrun's input) or ``default`` (the question's default was assumed; nobody confirmed it).",
+        "properties": {
+          "label": {
+            "description": "The answer in readable form.",
+            "title": "Label",
+            "type": "string"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "question_id": {
+            "title": "Question Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "user",
+              "preset",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "question_id",
+          "prompt",
+          "label",
+          "source"
+        ],
+        "title": "Answer",
+        "type": "object"
+      },
+      "AnswersBody": {
+        "additionalProperties": false,
+        "properties": {
+          "answers": {
+            "additionalProperties": true,
+            "description": "Answers by question id. A question left out takes its default.",
+            "title": "Answers",
+            "type": "object"
+          },
+          "batch": {
+            "description": "The id of the questions being answered (`question.id`).",
+            "title": "Batch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch"
+        ],
+        "title": "AnswersBody",
+        "type": "object"
+      },
+      "Choice": {
+        "additionalProperties": false,
+        "description": "One option of a :class:`Question`.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A short explanation of the option.",
+            "title": "Detail"
+          },
+          "label": {
+            "description": "What the person sees.",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "description": "What the agent gets when this is picked.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "Choice",
+        "type": "object"
+      },
       "ConnectionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -641,6 +748,136 @@
         "title": "ProviderView",
         "type": "object"
       },
+      "Question": {
+        "additionalProperties": false,
+        "description": "Something an agent asks the person running it, with the evidence behind the question.\n\n``choice`` takes one of ``choices`` (or any text, with ``allow_other``), ``multi_choice``\ntakes a list of them, and ``text`` takes free text.",
+        "properties": {
+          "allow_other": {
+            "default": false,
+            "description": "choice only: any text is accepted besides the choices.",
+            "title": "Allow Other",
+            "type": "boolean"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/Choice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "default": {
+            "description": "Used when the question is not asked; the suggested answer.",
+            "title": "Default"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the agent is asking.",
+            "title": "Detail"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "description": "Stable key, e.g. \"date_format:order_date\".",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "choice",
+            "enum": [
+              "choice",
+              "multi_choice",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "The question, as one sentence.",
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "description": "Whether an empty answer is refused.",
+            "title": "Required",
+            "type": "boolean"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A heading to group questions under.",
+            "title": "Section"
+          }
+        },
+        "required": [
+          "id",
+          "prompt"
+        ],
+        "title": "Question",
+        "type": "object"
+      },
+      "QuestionBatch": {
+        "additionalProperties": false,
+        "description": "Questions asked together, at one point of a run.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "minItems": 1,
+            "title": "Questions",
+            "type": "array"
+          },
+          "title": {
+            "description": "What is being decided, e.g. \"Check the plan\".",
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "questions"
+        ],
+        "title": "QuestionBatch",
+        "type": "object"
+      },
       "RunCreated": {
         "properties": {
           "links": {
@@ -669,6 +906,7 @@
             "enum": [
               "queued",
               "running",
+              "waiting",
               "done",
               "cancelled"
             ],
@@ -689,6 +927,14 @@
         "additionalProperties": false,
         "description": "Execution metadata attached to every result.",
         "properties": {
+          "answers": {
+            "description": "Questions the agent asked, and how each was answered.",
+            "items": {
+              "$ref": "#/components/schemas/Answer"
+            },
+            "title": "Answers",
+            "type": "array"
+          },
           "duration_s": {
             "anyOf": [
               {
@@ -795,6 +1041,12 @@
             ],
             "title": "Finished At"
           },
+          "last_event": {
+            "default": 0,
+            "description": "Number of the latest event; this view already includes it.",
+            "title": "Last Event",
+            "type": "integer"
+          },
           "llm": {
             "anyOf": [
               {
@@ -815,6 +1067,17 @@
                 "type": "null"
               }
             ]
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionBatch"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the run is asking; present only while it is waiting."
           },
           "queue_position": {
             "anyOf": [
@@ -859,6 +1122,7 @@
             "enum": [
               "queued",
               "running",
+              "waiting",
               "done",
               "cancelled"
             ],
@@ -1263,6 +1527,55 @@
         ]
       }
     },
+    "/runs/{run_id}/answers": {
+      "post": {
+        "description": "Answer the questions a waiting run asked; the run then carries on.",
+        "operationId": "answer_run_runs__run_id__answers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswersBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "The run is not waiting for these answers"
+          },
+          "422": {
+            "description": "The answers do not fit the questions"
+          }
+        },
+        "summary": "Answer Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/runs/{run_id}/events": {
       "get": {
         "operationId": "run_events_runs__run_id__events_get",
@@ -1279,7 +1592,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-sent events: status, progress, result"
+            "description": "Server-sent events: status, progress, question, result"
           },
           "422": {
             "content": {

@@ -35,6 +35,7 @@ const run: RunView = {
   agent_id: "echo",
   status: "done",
   queue_position: null,
+  last_event: 0,
   progress: null,
   created_at: "2026-10-19T10:00:00Z",
   started_at: "2026-10-19T10:00:00Z",

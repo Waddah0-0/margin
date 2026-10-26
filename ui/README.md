@@ -35,12 +35,14 @@ VITE_API_URL=http://127.0.0.1:9000 npm run dev
 | Home | The library's front page: a card for every installed agent, a launcher (pick an agent, paste its main input, run; it remembers the last agent used), and recent runs. |
 | Agents | Every installed agent, plus any that failed to load and why. |
 | Agent | The input form, generated from the agent's JSON schema: the main input first, other fields under "More options". It also shows the same run as a `margin run` command. An agent can add its own intro beside the form (`agentIntroFor` in `src/results/registry.ts`); the AI Code Detector's explains how it reads code. |
-| Run | Live progress over server-sent events: stage, percentage, queue position. You can cancel from here. When the run finishes, the result appears below. |
+| Run | Live progress over server-sent events: stage, percentage, queue position. You can cancel from here. When the agent asks a question, the run waits and a form shows the questions, the evidence behind them and the suggested answers; it carries on once you answer. When the run finishes, the result appears below. |
 | Runs | Recent runs. They live in the API's memory for an hour. |
 | Settings | The model agents use: a local server (Ollama, LM Studio, llama.cpp, vLLM), Anthropic or OpenAI, picked from the provider's live model list, with keys and a connection test. A run can also use a different model, chosen on its form. |
 
 Results use a generic viewer that works for any agent: the summary, findings with expandable
-evidence, warnings, run details, the raw JSON, and export to JSON or Markdown. An agent can
+evidence, warnings, the answers given to the agent's questions (with who gave each, and
+defaults nobody confirmed highlighted), run details, the raw JSON, and export to JSON or
+Markdown. An agent can
 have its own view instead. Register it in `src/results/registry.ts` under the agent's id.
 
 The AI Code Detector has one (`src/results/detector/`):

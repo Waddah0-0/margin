@@ -12,6 +12,7 @@ import { Minimap } from "../components/Minimap";
 import { EmptyState, ErrorState } from "../components/States";
 import { StatusChip } from "../components/StatusChip";
 import { WavyProgress } from "../components/WavyProgress";
+import { QuestionForm } from "../form/QuestionForm";
 import { duration, ordinal, secondsBetween, shortId } from "../lib/format";
 import { resultViewFor } from "../results/registry";
 import styles from "./pages.module.css";
@@ -49,6 +50,11 @@ function headline(run: RunView, cancelling: boolean): { title: string; detail?: 
           ? "The agent stops at its next checkpoint; a model call in progress finishes first."
           : undefined,
       };
+    case "waiting":
+      return {
+        title: cancelling ? "Stopping…" : "Waiting for your answer",
+        detail: "The agent paused to ask you something. It carries on once you answer.",
+      };
     case "cancelled":
       return { title: "Cancelled", detail: took ? `After ${duration(took)}.` : undefined };
     default:
@@ -74,6 +80,7 @@ export function RunPage() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string>();
   const live = run ? !isFinished(run.status) : false;
+  const working = live && run?.status !== "waiting";
   const now = useNow(live);
 
   if (missing) {
@@ -104,9 +111,16 @@ export function RunPage() {
 
   const agent = agents.data?.agents.find((a) => a.id === run.agent_id);
   const name = agent?.name ?? run.agent_id;
-  const { title, detail } = headline(run, cancelling && run.status === "running");
+  const { title, detail } = headline(
+    run,
+    cancelling && (run.status === "running" || run.status === "waiting"),
+  );
   const fraction =
-    run.status === "done" ? 1 : run.status === "running" ? (run.progress?.fraction ?? null) : null;
+    run.status === "done"
+      ? 1
+      : run.status === "running" || run.status === "waiting"
+        ? (run.progress?.fraction ?? null)
+        : null;
   const stages = stagesOf(timeline);
   const elapsed = run.started_at
     ? secondsBetween(run.started_at, run.finished_at ?? new Date(now).toISOString())
@@ -155,7 +169,7 @@ export function RunPage() {
           <div className={styles.progressRow}>
             <WavyProgress
               value={run.status === "cancelled" ? (run.progress?.fraction ?? 0) : fraction}
-              active={live}
+              active={working}
               label={`${name} progress`}
             />
             {fraction !== null && <span className={styles.pct}>{Math.round(fraction * 100)}%</span>}
@@ -164,7 +178,7 @@ export function RunPage() {
           {stages.length > 0 && (
             <ol className={styles.stages} aria-label="Stages">
               {stages.map((stage, i) => {
-                const current = live && i === stages.length - 1;
+                const current = working && i === stages.length - 1;
                 return (
                   <li key={stage} className={styles.stage} data-current={current}>
                     <Icon name={current ? "spinner" : "check"} size={16} />
@@ -199,11 +213,15 @@ export function RunPage() {
           <Minimap
             seed={run.run_id}
             rows={14}
-            reading={live}
+            reading={working}
             highlights={run.status === "done" && run.result?.status !== "error" ? [2, 7, 11] : []}
           />
         </div>
       </section>
+
+      {run.status === "waiting" && run.question ? (
+        <QuestionForm key={run.question.id} runId={run.run_id} batch={run.question} />
+      ) : null}
 
       {run.result && (run.status === "done" || run.result.status !== "error") ? (
         <ResultView run={run} result={run.result} />

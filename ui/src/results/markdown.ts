@@ -1,5 +1,11 @@
 /** Render an AgentResult as Markdown. Mirrors margin_core.reporting.markdown_report. */
-import type { AgentResult, Evidence } from "../api/client";
+import type { AgentResult, Answer, Evidence } from "../api/client";
+
+const ANSWERED_BY: Record<Answer["source"], string> = {
+  user: "you",
+  preset: "the run's input",
+  default: "default, not confirmed",
+};
 
 const cell = (text: unknown) => String(text).replaceAll("|", "\\|").replaceAll("\n", " ");
 
@@ -47,6 +53,12 @@ export function toMarkdown(result: AgentResult): string {
   if (warnings.length) md.push("## Warnings", "", ...warnings.map((w) => `- ${w}`), "");
 
   const meta = result.metadata;
+  const answers = meta?.answers ?? [];
+  if (answers.length) {
+    md.push("## Answers", "", "| Question | Answer | Given by |", "|---|---|---|");
+    md.push(...answers.map((a) => `| ${cell(a.prompt)} | ${cell(a.label)} | ${ANSWERED_BY[a.source]} |`), "");
+  }
+
   const rows: [string, unknown][] = [];
   if (meta) {
     if (meta.duration_s !== null && meta.duration_s !== undefined) {

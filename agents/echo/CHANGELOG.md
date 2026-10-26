@@ -10,3 +10,6 @@ All notable changes to this agent are documented here. The format follows
 - Echo a message, optionally repeated, and optionally ask the model to reply.
 - `message` is the primary input.
 - `message` carries an example value for forms.
+- `ask` asks how to echo the message (as typed or in capitals) before echoing it: the
+  smallest example of an agent asking a question. `answers` and `assume_defaults` come from
+  `AnswersInput`.

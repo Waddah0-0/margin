@@ -6,7 +6,13 @@ Public API::
     from margin_core import run_agent, list_agents, get_agent
 """
 
-from margin_core.agent import BaseAgent, CancellationToken, ProgressCallback, RunContext
+from margin_core.agent import (
+    BaseAgent,
+    CancellationToken,
+    ProgressCallback,
+    Responder,
+    RunContext,
+)
 from margin_core.errors import (
     AgentLoadError,
     AgentNotFoundError,
@@ -17,6 +23,7 @@ from margin_core.errors import (
     LimitExceededError,
     LLMError,
     LoaderError,
+    NoAnswerError,
     RunCancelledError,
     TransientLLMError,
 )
@@ -24,9 +31,14 @@ from margin_core.models import (
     AgentInfo,
     AgentInput,
     AgentResult,
+    Answer,
+    AnswersInput,
+    Choice,
     Evidence,
     Finding,
     ProgressEvent,
+    Question,
+    QuestionBatch,
     RunMetadata,
     TokenUsage,
 )
@@ -43,9 +55,12 @@ __all__ = [
     "AgentRegistry",
     "AgentResult",
     "AgentsLibError",
+    "Answer",
+    "AnswersInput",
     "BaseAgent",
     "BudgetExceededError",
     "CancellationToken",
+    "Choice",
     "Evidence",
     "Finding",
     "InputValidationError",
@@ -53,8 +68,12 @@ __all__ = [
     "LLMError",
     "LimitExceededError",
     "LoaderError",
+    "NoAnswerError",
     "ProgressCallback",
     "ProgressEvent",
+    "Question",
+    "QuestionBatch",
+    "Responder",
     "RunCancelledError",
     "RunContext",
     "RunMetadata",

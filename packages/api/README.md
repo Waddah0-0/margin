@@ -25,6 +25,7 @@ that and a few other things with `MARGIN_API_` environment variables (or a `.env
 | `MARGIN_API_RESULT_TTL_S` | `3600` | Seconds a finished run is kept. |
 | `MARGIN_API_MAX_BODY_BYTES` | `1000000` | Largest accepted request body. |
 | `MARGIN_API_CANCEL_GRACE_S` | `30` | Time a cancelled run gets to stop on its own before it is stopped. |
+| `MARGIN_API_ANSWER_TIMEOUT_S` | `3600` | How long a run waits for answers to its questions before it stops. |
 
 Model settings (`DEFAULT_LLM_PROVIDER`, `LOCAL_LLM_BASE_URL`, ...) are the same as for the CLI.
 
@@ -36,8 +37,9 @@ Model settings (`DEFAULT_LLM_PROVIDER`, `LOCAL_LLM_BASE_URL`, ...) are the same 
 | `GET /agents` | Installed agents with their input and output JSON schemas, plus any that failed to load. |
 | `GET /agents/{id}` | One agent. |
 | `POST /agents/{id}/runs` | Start a run. The body is the agent's input as JSON; `?provider=` and `?model=` choose the model for this run only. Answers `202` with the `run_id`. |
-| `GET /runs/{run_id}` | Status (`queued`, `running`, `done`, `cancelled`), queue position, latest progress and, when done, the result. |
-| `GET /runs/{run_id}/events` | Server-sent events: `status`, `progress`, then one final `result`. |
+| `GET /runs/{run_id}` | Status (`queued`, `running`, `waiting`, `done`, `cancelled`), queue position, latest progress, the open questions while `waiting` and, when done, the result. |
+| `GET /runs/{run_id}/events` | Server-sent events: `status`, `progress`, `question` when the agent asks something, then one final `result`. |
+| `POST /runs/{run_id}/answers` | Answer a waiting run: `{"batch": "<question.id>", "answers": {"<question id>": value}}`. A question left out takes its default. `422` if an answer does not fit, `409` if the run is not waiting for these questions. |
 | `DELETE /runs/{run_id}` | Cancel a run. |
 | `GET /runs` | Recent runs. |
 | `GET /settings/llm` | Model settings: the provider in use, each provider's model, whether a key is set (with its last four characters, never the key), and where each value comes from. |
@@ -78,8 +80,21 @@ When an agent fails, the run still finishes as `done`; the failure is in its res
 agent or run, `422` for input that doesn't match the agent's schema, `413` for a body that's
 too large, and `500` for an agent that failed to load.
 
+Some agents stop to ask a question. The run then moves to `waiting`, sends a `question`
+event, and its `GET /runs/{run_id}` view carries the questions. A waiting run gives up its
+place in the queue, so a question nobody answers never holds the GPU. Once you post the
+answers it goes back to `queued` and continues when a place is free. A run nobody answers
+stops after an hour (`MARGIN_API_ANSWER_TIMEOUT_S`) with an error result.
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/runs/342e1c.../answers \
+     -H 'content-type: application/json' \
+     -d '{"batch": "9f2c...", "answers": {"style": "capitals"}}'
+```
+
 Cancelling asks the agent to stop at its next checkpoint. A model call already under way is
 allowed to finish, and an agent that still hasn't stopped after the grace period is stopped.
+A waiting run stops at once.
 
 Runs live in memory. They're gone after an hour, or when the server restarts, so export a
 result if you want to keep it.

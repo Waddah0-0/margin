@@ -14,9 +14,11 @@ write a new agent (see [writing an agent](https://github.com/Waddah0-0/margin/bl
 ## How it works
 
 1. Validates the input.
-2. Joins `repeat` copies of `message` with spaces.
-3. If `use_llm` is true, sends `message` to the model and keeps the reply.
-4. Returns the echo as `data` and as one finding with a length metric as evidence.
+2. If `ask` is true, asks how to echo the message: as typed (the suggestion) or in capitals.
+   In the terminal the question appears there, and in the web UI as a form on the run page.
+3. Joins `repeat` copies of `message` with spaces.
+4. If `use_llm` is true, sends `message` to the model and keeps the reply.
+5. Returns the echo as `data` and as one finding with a length metric as evidence.
 
 It reports progress at each step and checks for cancellation before calling the model.
 
@@ -27,6 +29,9 @@ It reports progress at each step and checks for cancellation before calling the 
 | `message` | text, required | | The text to echo. This is the agent's primary input. |
 | `repeat` | 1 to 10 | 1 | How many times to repeat it. |
 | `use_llm` | true/false | false | Also send the message to the model and include its reply. |
+| `ask` | true/false | false | Ask how to echo the message first (question id `style`: `as_typed` or `capitals`). |
+| `answers` | object | `{}` | Answers given up front, e.g. `{"style": "capitals"}`. These are not asked. |
+| `assume_defaults` | true/false | false | Ask nothing and use the suggested answer, marked as not confirmed. |
 
 ## Output
 

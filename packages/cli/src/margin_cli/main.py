@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sys
 from enum import IntEnum, StrEnum
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -44,7 +45,13 @@ from margin_core.reporting import to_json, to_markdown
 from rich.console import Console
 
 from margin_cli import __version__
-from margin_cli.execution import ExplicitLLMError, ProgressDisplay, execute_cancellable, make_llm
+from margin_cli.execution import (
+    ExplicitLLMError,
+    ProgressDisplay,
+    TerminalQuestions,
+    execute_cancellable,
+    make_llm,
+)
 from margin_cli.render import agents_table, fields_table, input_fields
 
 
@@ -249,8 +256,13 @@ def run_agent(
         fail(str(exc), ExitCode.USAGE)
 
     agent = agent_cls(llm=llm)
-    with ProgressDisplay(stderr, agent_cls.name, enabled=not quiet) as on_progress:
-        ctx = RunContext(progress=on_progress, max_cost_usd=budget)
+    display = ProgressDisplay(stderr, agent_cls.name, enabled=not quiet)
+    # Questions are asked only when someone is at the terminal; otherwise they take their
+    # defaults, and the report marks those answers as not confirmed.
+    interactive = sys.stdin is not None and sys.stdin.isatty() and stderr.is_terminal
+    with display as on_progress:
+        responder = TerminalQuestions(stderr, display) if interactive else None
+        ctx = RunContext(progress=on_progress, max_cost_usd=budget, responder=responder)
         try:
             result = asyncio.run(execute_cancellable(agent, parsed, ctx))
         except KeyboardInterrupt:  # second Ctrl+C: stop immediately

@@ -15,7 +15,15 @@ from echo_agent import EchoAgent
 from fastapi.testclient import TestClient
 from margin_api.app import create_app
 from margin_api.settings import ApiSettings
-from margin_core import AgentInput, AgentRegistry, AgentResult, BaseAgent, RunContext
+from margin_core import (
+    AgentInput,
+    AgentRegistry,
+    AgentResult,
+    BaseAgent,
+    Choice,
+    Question,
+    RunContext,
+)
 from margin_core.llm import LLMClient, create_llm
 from margin_core.registry import ENTRY_POINT_GROUP
 from pydantic import BaseModel
@@ -60,10 +68,21 @@ class Gpu(Slow):
     uses_llm = True
 
 
+class Asking(Gpu):
+    """Asks a question first, then counts like Slow. Uses the GPU pool."""
+
+    id = "asking"
+
+    async def run(self, input: SlowInput, ctx: RunContext) -> AgentResult:
+        go = Question(id="go", prompt="Go on?", choices=[Choice(value=True, label="Yes")])
+        await ctx.ask([go], title="Check first")
+        return await super().run(input, ctx)
+
+
 def _registry() -> AgentRegistry:
     broken = EntryPoint(name="broken", value="no_such_module:Agent", group=ENTRY_POINT_GROUP)
     registry = AgentRegistry([broken])
-    for agent in (EchoAgent, Slow, Stubborn, Gpu):
+    for agent in (EchoAgent, Slow, Stubborn, Gpu, Asking):
         registry.register(agent)
     return registry
 
@@ -129,7 +148,7 @@ def test_health(client: TestClient) -> None:
 
 def test_list_and_describe_agents(client: TestClient) -> None:
     body = client.get("/agents").json()
-    assert [a["id"] for a in body["agents"]] == ["echo", "gpu", "slow", "stubborn"]
+    assert [a["id"] for a in body["agents"]] == ["asking", "echo", "gpu", "slow", "stubborn"]
     assert "broken" in body["load_errors"]
     echo = client.get("/agents/echo").json()
     assert echo["primary_input"] == "message" and echo["uses_llm"] is False
@@ -228,6 +247,96 @@ def test_llm_runs_queue_one_at_a_time() -> None:
         assert client.delete(f"/runs/{second}").json()["status"] == "cancelled"  # while queued
         client.delete(f"/runs/{first}")
         wait_for(client, first, {"cancelled"})
+
+
+# ---- questions --------------------------------------------------------------------------
+
+
+def answer(client: TestClient, run_id: str, answers: dict[str, Any], batch: str | None = None):  # type: ignore[no-untyped-def]
+    if batch is None:
+        batch = client.get(f"/runs/{run_id}").json()["question"]["id"]
+    return client.post(f"/runs/{run_id}/answers", json={"batch": batch, "answers": answers})
+
+
+def test_a_run_waits_for_answers_then_carries_on(client: TestClient) -> None:
+    run_id = start(client, "echo", {"message": "hi", "ask": True})
+    waiting = wait_for(client, run_id, {"waiting"})
+    question = waiting["question"]
+    assert question["title"] == "Before echoing"
+    assert [q["id"] for q in question["questions"]] == ["style"]
+    assert question["questions"][0]["evidence"][0]["detail"] == "message: hi"
+    assert waiting["last_event"] >= 4  # queued, running, waiting, question
+
+    response = answer(client, run_id, {"style": "capitals"})
+    assert response.status_code == 202, response.text
+    done = wait_for(client, run_id, {"done"})
+    assert done["question"] is None
+    assert done["result"]["data"]["echoed"] == "HI"
+    (given,) = done["result"]["metadata"]["answers"]
+    assert given["source"] == "user" and given["label"] == "In capitals"
+
+    events = sse(client, run_id)
+    statuses = [e["data"]["status"] for e in events if e["event"] == "status"]
+    assert statuses == ["queued", "running", "waiting", "queued", "running", "done"]
+    (asked,) = [e for e in events if e["event"] == "question"]
+    assert asked["data"]["id"] == question["id"]
+
+
+def test_answers_that_do_not_fit_are_refused(client: TestClient) -> None:
+    run_id = start(client, "echo", {"message": "hi", "ask": True})
+    waiting = wait_for(client, run_id, {"waiting"})
+    batch = waiting["question"]["id"]
+
+    wrong = answer(client, run_id, {"style": "sideways"}, batch)
+    assert wrong.status_code == 422 and "not one of the choices" in wrong.json()["detail"]
+    assert answer(client, run_id, {"nope": 1}, batch).status_code == 422
+    assert answer(client, run_id, {}, "an-old-batch").status_code == 409
+    assert client.get(f"/runs/{run_id}").json()["status"] == "waiting"  # nothing changed
+
+    assert answer(client, run_id, {}, batch).status_code == 202  # left out: the default
+    done = wait_for(client, run_id, {"done"})
+    assert done["result"]["data"]["echoed"] == "hi"
+    assert done["result"]["metadata"]["answers"][0]["source"] == "default"
+    assert answer(client, run_id, {}, batch).status_code == 409  # not waiting any more
+    assert client.post("/runs/nope/answers", json={"batch": "x"}).status_code == 404
+
+
+def test_a_waiting_run_gives_its_place_to_others() -> None:
+    with make_client(llm_concurrency=1) as client:
+        asking = start(client, "asking", {"steps": 5})
+        wait_for(client, asking, {"waiting"})
+        # the single GPU place is free while it waits
+        other = start(client, "gpu", {"steps": 5})
+        assert wait_for(client, other, {"done"})["result"]["status"] == "ok"
+
+        busy = start(client, "gpu", {"steps": 2000})
+        wait_for(client, busy, {"running"})
+        assert answer(client, asking, {"go": True}).status_code == 202
+        requeued = wait_for(client, asking, {"queued"})
+        assert requeued["queue_position"] == 1  # back in line behind the busy run
+
+        client.delete(f"/runs/{busy}")
+        done = wait_for(client, asking, {"done"})
+        assert done["result"]["status"] == "ok" and done["result"]["data"] == {"steps": 5}
+
+
+def test_a_waiting_run_can_be_cancelled(client: TestClient) -> None:
+    run_id = start(client, "asking", {"steps": 5})
+    wait_for(client, run_id, {"waiting"})
+    assert client.delete(f"/runs/{run_id}").status_code == 202
+    done = wait_for(client, run_id, {"cancelled"}, timeout=3)
+    assert done["question"] is None
+
+
+def test_a_question_nobody_answers_stops_the_run() -> None:
+    with make_client(answer_timeout_s=0.2) as client:
+        run_id = start(client, "asking", {"steps": 5})
+        done = wait_for(client, run_id, {"done"})
+        assert done["result"]["status"] == "error"
+        assert "No answer came within 0.2 seconds" in done["result"]["error"]
+        # it no longer holds anything: another GPU run goes straight through
+        other = start(client, "gpu", {"steps": 1})
+        assert wait_for(client, other, {"done"})["result"]["status"] == "ok"
 
 
 # ---- limits and housekeeping ------------------------------------------------------------

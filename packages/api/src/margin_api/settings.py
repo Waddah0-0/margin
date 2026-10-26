@@ -25,6 +25,7 @@ class ApiSettings(BaseSettings):
     max_runs: int = 1000  # stored runs, finished ones are dropped oldest first
     event_buffer: int = 200  # progress events kept per run for late subscribers
     cancel_grace_s: float = 30.0  # time a cancelled run gets to stop on its own
+    answer_timeout_s: float = 3600.0  # a run waiting for answers stops after this
 
 
 def load_settings() -> ApiSettings:

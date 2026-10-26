@@ -128,6 +128,7 @@ The services available on `ctx`:
 | `ctx.check_cancelled()` | Stop promptly when the user cancels. Call it between expensive steps. |
 | `ctx.warn(message)` | Add a warning to the result, e.g. "3 files could not be parsed". |
 | `ctx.require_llm()` | Get this run's model session, or fail clearly if none is configured. |
+| `await ctx.ask(questions, title=...)` | Stop and ask the person running the agent. See [Asking questions](#asking-questions). |
 
 ### Results and status
 
@@ -153,6 +154,59 @@ verdict = await ctx.require_llm().complete_structured(Verdict, prompt, system=RU
 valid JSON. The default model is local (Ollama, `qwen3.5:9b`), with a context window that
 may be as small as 8,192 tokens. Keep prompts well under it, and expect each call to take
 seconds.
+
+### Asking questions
+
+When an agent cannot decide something from the input alone, such as which date format a
+column uses, it should ask instead of guessing. `ctx.ask` pauses the run, puts the
+questions to the person running it, and returns the answers:
+
+```python
+from margin_core import AnswersInput, Choice, Evidence, Question
+
+
+class CleanerInput(AnswersInput):  # adds the standard `answers` and `assume_defaults` fields
+    path: str
+
+
+answers = await ctx.ask(
+    [
+        Question(
+            id="date_format:order_date",
+            prompt="Which date format does order_date use?",
+            detail="Every day and month in it is 12 or less, so both readings are possible.",
+            choices=[
+                Choice(value="mdy", label="MM/DD/YYYY"),
+                Choice(value="dmy", label="DD/MM/YYYY"),
+            ],
+            default="mdy",
+            evidence=[
+                Evidence(kind="sample", location="order_date", detail="01/02/2024, 03/04/2024")
+            ],
+        ),
+    ],
+    title="Check the cleaning plan",
+    preset=input.answers,
+    assume_defaults=input.assume_defaults,
+)
+fmt = answers["date_format:order_date"].value
+```
+
+- Ask everything you need at one point in one call. The person answers once, not once per
+  question.
+- Question kinds: `choice` (one of `choices`, or any text with `allow_other=True`),
+  `multi_choice` (a list of them) and `text`. Give a `default` whenever there is a sensible
+  one; it is shown as the suggestion. Attach the `evidence` that made you ask.
+- How the question reaches a person depends on where the agent runs. `margin run` asks in
+  the terminal. The API sets the run to `waiting` and the web UI shows a form. A Python
+  caller passes a `responder` to `RunContext`.
+- When there is nobody to ask (a script, CI, `assume_defaults=true`), every question takes
+  its default. The result records it as not confirmed and adds a warning. A required
+  question without a default then fails the run with `NoAnswerError`, so give such questions
+  a default, or tell users to answer them up front.
+- Answers given in the `answers` input field are not asked. Every answer, with who gave it
+  (`user`, `preset` or `default`), is kept in `result.metadata.answers`, and the reports
+  list them. Use stable ids, so a run can be repeated with the same answers.
 
 ## 5. Tests
 

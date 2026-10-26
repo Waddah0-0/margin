@@ -2,23 +2,27 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import BaseModel, ValidationError
 
-from margin_core.errors import InputValidationError, LLMError, RunCancelledError
+from margin_core.errors import InputValidationError, LLMError, NoAnswerError, RunCancelledError
 from margin_core.llm.base import LLMClient
 from margin_core.logging import get_logger
 from margin_core.models import (
     AgentInfo,
     AgentResult,
+    Answer,
     Finding,
     ProgressEvent,
+    Question,
+    QuestionBatch,
     ResultStatus,
     TokenUsage,
 )
@@ -28,8 +32,12 @@ if TYPE_CHECKING:
     from margin_core.loaders.filters import FilterConfig
 
 ProgressCallback = Callable[[ProgressEvent], None]
+Responder = Callable[[QuestionBatch], Awaitable[Mapping[str, Any]]]
+"""Puts a batch of questions to a person and returns the raw answers, by question id."""
 
-__all__ = ["BaseAgent", "CancellationToken", "ProgressCallback", "RunContext"]
+_CANCEL_POLL_S = 0.2
+
+__all__ = ["BaseAgent", "CancellationToken", "ProgressCallback", "Responder", "RunContext"]
 
 
 class CancellationToken:
@@ -51,7 +59,10 @@ class RunContext:
 
     During :meth:`BaseAgent.execute`, ``llm`` is a per-run :class:`LLMSession` opened from the
     configured client, limited by ``max_cost_usd``. Anything added with :meth:`warn` ends up in
-    the result's ``warnings``.
+    the result's ``warnings``, and every answer from :meth:`ask` in its ``metadata.answers``.
+
+    ``responder`` is how :meth:`ask` reaches a person: the CLI asks in the terminal, the API
+    pauses the run until answers are posted. Without one, questions take their defaults.
     """
 
     def __init__(
@@ -62,13 +73,16 @@ class RunContext:
         cancel_token: CancellationToken | None = None,
         logger: logging.Logger | None = None,
         max_cost_usd: float | None = None,
+        responder: Responder | None = None,
     ) -> None:
         self.llm = llm
         self.progress = progress
         self.cancel_token = cancel_token or CancellationToken()
         self.logger = logger or get_logger("run")
         self.max_cost_usd = max_cost_usd
+        self.responder = responder
         self.warnings: list[str] = []
+        self.answers: list[Answer] = []
 
     def warn(self, message: str) -> None:
         """Record a warning for the result (duplicates are ignored)."""
@@ -109,6 +123,75 @@ class RunContext:
         """Raise :class:`RunCancelledError` if the run was cancelled. Call between steps."""
         if self.cancel_token.cancelled:
             raise RunCancelledError("Run was cancelled")
+
+    async def ask(
+        self,
+        questions: Sequence[Question],
+        *,
+        title: str,
+        detail: str | None = None,
+        preset: Mapping[str, Any] | None = None,
+        assume_defaults: bool = False,
+    ) -> dict[str, Answer]:
+        """Ask the person running the agent, wait for the answers, and return them by id.
+
+        All the questions are asked at once. Questions answered in ``preset`` (usually an
+        ``answers`` input field) are not asked. The rest go to the responder, unless there is
+        none or ``assume_defaults`` is set: then each takes its default, recorded as not
+        confirmed and reported as a warning. A required question without a default that
+        cannot be asked raises :class:`NoAnswerError`.
+        """
+        batch = QuestionBatch(title=title, detail=detail, questions=list(questions))
+        preset = preset or {}
+        answers: dict[str, Answer] = {}
+        for question in batch.questions:
+            if question.id in preset:
+                try:
+                    value = question.check(preset[question.id])
+                except ValueError as exc:
+                    raise InputValidationError(
+                        f"The answer given for {question.id!r} is not valid: {exc}"
+                    ) from exc
+                answers[question.id] = Answer.of(question, value, "preset")
+
+        remaining = [q for q in batch.questions if q.id not in answers]
+        if remaining and self.responder is not None and not assume_defaults:
+            pending = batch.model_copy(update={"questions": remaining})
+            self.check_cancelled()
+            raw = await self._wait_for_answers(self.responder(pending))
+            try:
+                answers.update(pending.resolve(raw, "user"))
+            except ValueError as exc:
+                raise InputValidationError(f"Invalid answers: {exc}") from exc
+        elif remaining:
+            unanswerable = [q.id for q in remaining if q.required and q.default is None]
+            if unanswerable:
+                raise NoAnswerError(
+                    "These questions need an answer and there was no one to ask: "
+                    f"{', '.join(unanswerable)}. Give the answers with the run's input."
+                )
+            for question in remaining:
+                answer = Answer.of(question, question.check(question.default), "default")
+                answers[question.id] = answer
+                if question.default is not None:
+                    self.warn(f'Not confirmed: assumed "{answer.label}" for "{question.prompt}"')
+
+        ordered = {q.id: answers[q.id] for q in batch.questions}
+        self.answers.extend(ordered.values())
+        return ordered
+
+    async def _wait_for_answers(self, pending: Awaitable[Mapping[str, Any]]) -> Mapping[str, Any]:
+        """Await the responder, giving up as soon as the run is cancelled."""
+        task = asyncio.ensure_future(pending)
+        try:
+            while True:
+                done, _ = await asyncio.wait({task}, timeout=_CANCEL_POLL_S)
+                if done:
+                    return task.result()
+                self.check_cancelled()
+        finally:
+            if not task.done():
+                task.cancel()
 
     def require_llm(self) -> LLMClient:
         """Return the LLM client or fail with a clear error if none was configured."""
@@ -241,6 +324,7 @@ class BaseAgent(ABC):
                 "duration_s": round(time.perf_counter() - t0, 4),
                 "model": result.metadata.model or used_model,
                 "usage": session.usage if session else TokenUsage(),
+                "answers": [*result.metadata.answers, *ctx.answers],
             }
         )
         return result.model_copy(update={"metadata": metadata, "warnings": warnings})

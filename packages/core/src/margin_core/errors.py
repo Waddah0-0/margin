@@ -25,6 +25,10 @@ class RunCancelledError(AgentsLibError):
     """The run was cancelled through its cancellation token."""
 
 
+class NoAnswerError(AgentsLibError):
+    """An agent's question could not be answered: nobody to ask, or no answer in time."""
+
+
 class LoaderError(AgentsLibError):
     """Base class for errors raised while loading a workspace."""
 

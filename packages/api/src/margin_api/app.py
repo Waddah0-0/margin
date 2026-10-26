@@ -23,16 +23,17 @@ from margin_core import (
     BaseAgent,
     InputValidationError,
     ProgressEvent,
+    QuestionBatch,
     default_registry,
 )
 from margin_core.config import get_settings
 from margin_core.llm import LLMClient, create_llm
 from margin_core.logging import get_logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sse_starlette.sse import EventSourceResponse
 
 from margin_api import __version__
-from margin_api.jobs import Run, RunManager, RunStatus
+from margin_api.jobs import NotWaitingError, Run, RunManager, RunStatus
 from margin_api.llm_settings import router as llm_settings_router
 from margin_api.settings import ApiSettings, load_settings
 
@@ -74,6 +75,22 @@ class RunView(BaseModel):
     finished_at: datetime | None
     result: AgentResult | None = Field(description="Present once the run is done.")
     llm: RunModel | None = Field(default=None, description="The model this run uses, if any.")
+    question: QuestionBatch | None = Field(
+        default=None, description="What the run is asking; present only while it is waiting."
+    )
+    last_event: int = Field(
+        default=0, description="Number of the latest event; this view already includes it."
+    )
+
+
+class AnswersBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    batch: str = Field(description="The id of the questions being answered (`question.id`).")
+    answers: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Answers by question id. A question left out takes its default.",
+    )
 
 
 class _BodyLimit:
@@ -201,7 +218,7 @@ def create_app(
             queue_position=manager.queue_position(run), progress=run.progress,
             created_at=run.created_at, started_at=run.started_at,
             finished_at=run.finished_at, result=run.result,
-            llm=llm,
+            llm=llm, question=run.question, last_event=run.last_event,
         )  # fmt: skip
 
     @app.get("/health", tags=["meta"])
@@ -271,11 +288,32 @@ def create_app(
         await manager.cancel(run)
         return view(run)
 
+    @app.post(
+        "/runs/{run_id}/answers",
+        response_model=RunView,
+        status_code=202,
+        tags=["runs"],
+        responses={
+            409: {"description": "The run is not waiting for these answers"},
+            422: {"description": "The answers do not fit the questions"},
+        },
+    )
+    async def answer_run(run_id: str, body: AnswersBody) -> RunView:
+        """Answer the questions a waiting run asked; the run then carries on."""
+        run = find_run(run_id)
+        try:
+            manager.answer(run, body.batch, body.answers)
+        except NotWaitingError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(422, f"Invalid answers: {exc}") from exc
+        return view(run)
+
     @app.get(
         "/runs/{run_id}/events",
         tags=["runs"],
         response_class=EventSourceResponse,
-        responses={200: {"description": "Server-sent events: status, progress, result"}},
+        responses={200: {"description": "Server-sent events: status, progress, question, result"}},
     )
     async def run_events(run_id: str, request: Request) -> EventSourceResponse:
         run = find_run(run_id)

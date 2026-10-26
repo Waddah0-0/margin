@@ -4,6 +4,20 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Agents can ask the person running them: `await ctx.ask(questions, title=...)` puts one or
+  more `Question`s (choice, multiple choice or text, with a default and evidence) to whoever
+  runs the agent and returns the answers. `RunContext(responder=...)` decides how they are
+  asked; without a responder, questions take their defaults.
+- `AnswersInput`: a base input model with the standard `answers` (given up front, not asked)
+  and `assume_defaults` fields.
+- `RunMetadata.answers` keeps every answer and who gave it (`user`, `preset` or `default`).
+  Defaults nobody confirmed are also reported as warnings. The Markdown report lists the
+  answers.
+- `NoAnswerError` for a question that could not be answered.
+
 ## [0.1.1] - 2026-10-21
 
 ### Security

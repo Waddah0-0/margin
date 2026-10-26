@@ -17,6 +17,8 @@ export function runLook(run: RunView): Look {
       };
     case "running":
       return { tone: "active", icon: "spinner", label: "Running" };
+    case "waiting":
+      return { tone: "warn", icon: "question", label: "Needs your answer" };
     case "cancelled":
       return { tone: "neutral", icon: "block", label: "Cancelled" };
     default:

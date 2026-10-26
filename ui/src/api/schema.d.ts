@@ -107,6 +107,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer Run
+         * @description Answer the questions a waiting run asked; the run then carries on.
+         */
+        post: operations["answer_run_runs__run_id__answers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs/{run_id}/events": {
         parameters: {
             query?: never;
@@ -270,6 +290,67 @@ export interface components {
             summary: string;
             /** Warnings */
             warnings?: string[];
+        };
+        /**
+         * Answer
+         * @description How one question was answered, kept with the result so every choice can be traced.
+         *
+         *     ``source`` says who decided: ``user`` (answered when asked), ``preset`` (given with the
+         *     run's input) or ``default`` (the question's default was assumed; nobody confirmed it).
+         */
+        Answer: {
+            /**
+             * Label
+             * @description The answer in readable form.
+             */
+            label: string;
+            /** Prompt */
+            prompt: string;
+            /** Question Id */
+            question_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "user" | "preset" | "default";
+            /** Value */
+            value?: unknown;
+        };
+        /** AnswersBody */
+        AnswersBody: {
+            /**
+             * Answers
+             * @description Answers by question id. A question left out takes its default.
+             */
+            answers?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Batch
+             * @description The id of the questions being answered (`question.id`).
+             */
+            batch: string;
+        };
+        /**
+         * Choice
+         * @description One option of a :class:`Question`.
+         */
+        Choice: {
+            /**
+             * Detail
+             * @description A short explanation of the option.
+             */
+            detail?: string | null;
+            /**
+             * Label
+             * @description What the person sees.
+             */
+            label: string;
+            /**
+             * Value
+             * @description What the agent gets when this is picked.
+             */
+            value: string | number | boolean;
         };
         /** ConnectionRequest */
         ConnectionRequest: {
@@ -459,6 +540,79 @@ export interface components {
              */
             on_device: boolean;
         };
+        /**
+         * Question
+         * @description Something an agent asks the person running it, with the evidence behind the question.
+         *
+         *     ``choice`` takes one of ``choices`` (or any text, with ``allow_other``), ``multi_choice``
+         *     takes a list of them, and ``text`` takes free text.
+         */
+        Question: {
+            /**
+             * Allow Other
+             * @description choice only: any text is accepted besides the choices.
+             * @default false
+             */
+            allow_other: boolean;
+            /** Choices */
+            choices?: components["schemas"]["Choice"][];
+            /**
+             * Default
+             * @description Used when the question is not asked; the suggested answer.
+             */
+            default?: unknown;
+            /**
+             * Detail
+             * @description Why the agent is asking.
+             */
+            detail?: string | null;
+            /** Evidence */
+            evidence?: components["schemas"]["Evidence"][];
+            /**
+             * Id
+             * @description Stable key, e.g. "date_format:order_date".
+             */
+            id: string;
+            /**
+             * Kind
+             * @default choice
+             * @enum {string}
+             */
+            kind: "choice" | "multi_choice" | "text";
+            /**
+             * Prompt
+             * @description The question, as one sentence.
+             */
+            prompt: string;
+            /**
+             * Required
+             * @description Whether an empty answer is refused.
+             * @default true
+             */
+            required: boolean;
+            /**
+             * Section
+             * @description A heading to group questions under.
+             */
+            section?: string | null;
+        };
+        /**
+         * QuestionBatch
+         * @description Questions asked together, at one point of a run.
+         */
+        QuestionBatch: {
+            /** Detail */
+            detail?: string | null;
+            /** Id */
+            id?: string;
+            /** Questions */
+            questions: components["schemas"]["Question"][];
+            /**
+             * Title
+             * @description What is being decided, e.g. "Check the plan".
+             */
+            title: string;
+        };
         /** RunCreated */
         RunCreated: {
             /** Links */
@@ -473,13 +627,18 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "queued" | "running" | "done" | "cancelled";
+            status: "queued" | "running" | "waiting" | "done" | "cancelled";
         };
         /**
          * RunMetadata
          * @description Execution metadata attached to every result.
          */
         RunMetadata: {
+            /**
+             * Answers
+             * @description Questions the agent asked, and how each was answered.
+             */
+            answers?: components["schemas"]["Answer"][];
             /** Duration S */
             duration_s?: number | null;
             /** Extra */
@@ -512,9 +671,17 @@ export interface components {
             created_at: string;
             /** Finished At */
             finished_at: string | null;
+            /**
+             * Last Event
+             * @description Number of the latest event; this view already includes it.
+             * @default 0
+             */
+            last_event: number;
             /** @description The model this run uses, if any. */
             llm?: components["schemas"]["RunModel"] | null;
             progress: components["schemas"]["ProgressEvent"] | null;
+            /** @description What the run is asking; present only while it is waiting. */
+            question?: components["schemas"]["QuestionBatch"] | null;
             /**
              * Queue Position
              * @description 1 = next to start; null unless queued.
@@ -530,7 +697,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "queued" | "running" | "done" | "cancelled";
+            status: "queued" | "running" | "waiting" | "done" | "cancelled";
         };
         /**
          * TokenUsage
@@ -786,6 +953,46 @@ export interface operations {
             };
         };
     };
+    answer_run_runs__run_id__answers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswersBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description The run is not waiting for these answers */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The answers do not fit the questions */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     run_events_runs__run_id__events_get: {
         parameters: {
             query?: never;
@@ -797,7 +1004,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Server-sent events: status, progress, result */
+            /** @description Server-sent events: status, progress, question, result */
             200: {
                 headers: {
                     [name: string]: unknown;

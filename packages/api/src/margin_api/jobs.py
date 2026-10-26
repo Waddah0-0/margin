@@ -4,6 +4,10 @@ A run moves through ``queued -> running -> done`` (or ``cancelled``). A run whos
 fails still ends as ``done``: the failure is in its result (``status="error"``), not in the
 run's state. Progress events are numbered and kept in a bounded buffer, so a client that
 connects late (or reconnects) gets everything it missed.
+
+When the agent asks a question, the run goes ``running -> waiting`` and gives its place in
+the pool to the next run, so a question nobody answers never holds the GPU. Once answered
+it goes back to ``queued`` and runs again when a place is free.
 """
 
 from __future__ import annotations
@@ -13,27 +17,40 @@ import contextlib
 import time
 import uuid
 from collections import deque
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from margin_core import AgentRegistry, AgentResult, BaseAgent, ProgressEvent, RunContext
+from margin_core import (
+    AgentRegistry,
+    AgentResult,
+    BaseAgent,
+    NoAnswerError,
+    ProgressEvent,
+    QuestionBatch,
+    RunContext,
+)
 from margin_core.llm import LLMClient
 from margin_core.logging import get_logger
 from pydantic import BaseModel
 
 from margin_api.settings import ApiSettings
 
-RunStatus = Literal["queued", "running", "done", "cancelled"]
+RunStatus = Literal["queued", "running", "waiting", "done", "cancelled"]
+EventKind = Literal["status", "progress", "question", "result"]
 FINISHED: frozenset[str] = frozenset({"done", "cancelled"})
 logger = get_logger("api.jobs")
+
+
+class NotWaitingError(Exception):
+    """Answers were posted to a run that is not waiting for them."""
 
 
 @dataclass
 class RunEvent:
     seq: int
-    kind: Literal["status", "progress", "result"]
+    kind: EventKind
     data: dict[str, Any]
 
 
@@ -55,12 +72,21 @@ class Run:
     llm_provider: str | None = None
     llm_model: str | None = None
     finished_monotonic: float | None = None
+    question: QuestionBatch | None = None  # what the run is waiting on
+    answer: asyncio.Future[Mapping[str, Any]] | None = None
+    holds_slot: bool = False  # whether it has a place in its pool right now
     _seq: int = 0
     _changed: asyncio.Event = field(default_factory=asyncio.Event)
 
-    def add_event(
-        self, kind: Literal["status", "progress", "result"], data: dict[str, Any]
-    ) -> None:
+    @property
+    def last_event(self) -> int:
+        return self._seq
+
+    def set_status(self, status: RunStatus) -> None:
+        self.status = status
+        self.add_event("status", {"status": status})
+
+    def add_event(self, kind: EventKind, data: dict[str, Any]) -> None:
         self._seq += 1
         self.events.append(RunEvent(self._seq, kind, data))
         # wake every waiting subscriber, then arm a fresh event for the next change
@@ -140,27 +166,43 @@ class RunManager:
     def queue_position(self, run: Run) -> int | None:
         return self.pools[run.pool].position(run.id) if run.status == "queued" else None
 
-    async def _execute(self, run: Run, agent_cls: type[BaseAgent], parsed: BaseModel) -> None:
+    async def _take_slot(self, run: Run) -> None:
+        """Wait in line for a place in the run's pool."""
         pool = self.pools[run.pool]
+        if run.id not in pool.waiting:
+            pool.waiting.append(run.id)
         try:
-            async with pool.semaphore:
-                with contextlib.suppress(ValueError):
-                    pool.waiting.remove(run.id)
-                if run.token.cancelled:
-                    self._finish(run, None, cancelled=True)
-                    return
-                run.status = "running"
-                run.started_at = datetime.now(UTC)
-                run.add_event("status", {"status": "running"})
+            await pool.semaphore.acquire()
+        finally:
+            with contextlib.suppress(ValueError):
+                pool.waiting.remove(run.id)
+        run.holds_slot = True
 
-                def on_progress(event: ProgressEvent) -> None:
-                    run.progress = event
-                    run.add_event("progress", event.model_dump(mode="json"))
+    def _free_slot(self, run: Run) -> None:
+        if run.holds_slot:
+            run.holds_slot = False
+            self.pools[run.pool].semaphore.release()
 
-                agent = agent_cls(llm=run.llm)
-                ctx = RunContext(progress=on_progress, cancel_token=run.token)
-                result = await agent.execute(parsed, ctx)
-                self._finish(run, result, cancelled=run.token.cancelled)
+    async def _execute(self, run: Run, agent_cls: type[BaseAgent], parsed: BaseModel) -> None:
+        try:
+            await self._take_slot(run)
+            if run.token.cancelled:
+                self._finish(run, None, cancelled=True)
+                return
+            run.started_at = datetime.now(UTC)
+            run.set_status("running")
+
+            def on_progress(event: ProgressEvent) -> None:
+                run.progress = event
+                run.add_event("progress", event.model_dump(mode="json"))
+
+            async def ask(batch: QuestionBatch) -> Mapping[str, Any]:
+                return await self._wait_for_answers(run, batch)
+
+            agent = agent_cls(llm=run.llm)
+            ctx = RunContext(progress=on_progress, cancel_token=run.token, responder=ask)
+            result = await agent.execute(parsed, ctx)
+            self._finish(run, result, cancelled=run.token.cancelled)
         except asyncio.CancelledError:
             self._finish(run, None, cancelled=True)
         except Exception as exc:  # noqa: BLE001 - never lose a run silently
@@ -176,6 +218,41 @@ class RunManager:
                 ),  # fmt: skip
                 cancelled=False,
             )
+        finally:
+            self._free_slot(run)
+
+    # ---- questions ------------------------------------------------------------------
+
+    async def _wait_for_answers(self, run: Run, batch: QuestionBatch) -> Mapping[str, Any]:
+        """The run's responder: pause, free the pool place, and wait for answers."""
+        run.answer = asyncio.get_running_loop().create_future()
+        run.question = batch
+        self._free_slot(run)
+        run.set_status("waiting")
+        run.add_event("question", batch.model_dump(mode="json"))
+        try:
+            answers = await asyncio.wait_for(run.answer, self.settings.answer_timeout_s)
+        except TimeoutError:
+            limit = self.settings.answer_timeout_s
+            span = f"{round(limit / 60)} minutes" if limit >= 120 else f"{limit:g} seconds"
+            raise NoAnswerError(f"No answer came within {span}, so the run stopped.") from None
+        finally:
+            run.question = None
+            run.answer = None
+        run.set_status("queued")
+        await self._take_slot(run)
+        run.set_status("running")
+        return answers
+
+    def answer(self, run: Run, batch_id: str, answers: Mapping[str, Any]) -> None:
+        """Resume a waiting run. Raises :class:`NotWaitingError`, or ``ValueError`` for
+        answers that do not fit the questions (nothing is changed then)."""
+        if run.status != "waiting" or run.question is None or run.answer is None:
+            raise NotWaitingError("This run is not waiting for answers")
+        if batch_id != run.question.id or run.answer.done():
+            raise NotWaitingError("These questions have already been answered")
+        run.question.resolve(answers, "user")
+        run.answer.set_result(dict(answers))
 
     def _finish(self, run: Run, result: AgentResult | None, *, cancelled: bool) -> None:
         if run.status in FINISHED:

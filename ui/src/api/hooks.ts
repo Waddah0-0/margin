@@ -7,6 +7,7 @@ import {
   call,
   isFinished,
   type ProgressEvent,
+  type QuestionBatch,
   type RunStatus,
   type RunView,
 } from "./client";
@@ -78,8 +79,6 @@ export function useRuns(limit = 50): Loadable<RunView[]> {
   return runs;
 }
 
-const RANK: Record<RunStatus, number> = { queued: 0, running: 1, done: 2, cancelled: 2 };
-
 export interface LiveRun {
   run: RunView | undefined;
   /** Every progress event received, oldest first. */
@@ -126,29 +125,50 @@ export function useLiveRun(runId: string): LiveRun {
     const stop = () => {
       source?.close();
       if (poll) clearInterval(poll);
+      poll = undefined;
+    };
+
+    // queue positions are not pushed as events, so poll while waiting in line
+    const pollWhileQueued = () => {
+      if (poll) return;
+      poll = setInterval(() => {
+        refresh().then((v) => {
+          if (v && v.status !== "queued" && poll) {
+            clearInterval(poll);
+            poll = undefined;
+          }
+        });
+      }, 2000);
     };
 
     refresh().then((view) => {
       if (!live || !view) return;
       // A finished run's stream replays its buffered events and ends, which fills in the
-      // stage history; a live one keeps streaming until the result.
+      // stage history; a live one keeps streaming until the result. The view already
+      // includes every event up to `last_event`, so replayed ones only add to the timeline.
+      const seen = view.last_event ?? 0;
+      const isNew = (e: Event) => Number((e as MessageEvent).lastEventId) > seen;
       source = new EventSource(`${API_URL}/runs/${encodeURIComponent(runId)}/events`);
-      if (view.status === "queued") {
-        // queue positions are not pushed as events, so poll while waiting in line
-        poll = setInterval(() => {
-          refresh().then((v) => {
-            if (v && v.status !== "queued" && poll) clearInterval(poll);
-          });
-        }, 2000);
-      }
+      if (view.status === "queued") pollWhileQueued();
       source.addEventListener("status", (e) => {
+        if (!isNew(e)) return;
         const { status } = JSON.parse((e as MessageEvent).data) as { status: RunStatus };
-        // the stream starts with the buffered history, so never move a run backwards
+        if (status === "queued") pollWhileQueued();
         setRun((r) =>
-          r && RANK[status] > RANK[r.status]
-            ? { ...r, status, queue_position: status === "queued" ? r.queue_position : null }
+          r
+            ? {
+                ...r,
+                status,
+                queue_position: status === "queued" ? r.queue_position : null,
+                question: status === "waiting" ? r.question : null,
+              }
             : r,
         );
+      });
+      source.addEventListener("question", (e) => {
+        if (!isNew(e)) return;
+        const question = JSON.parse((e as MessageEvent).data) as QuestionBatch;
+        setRun((r) => (r ? { ...r, status: "waiting", question } : r));
       });
       source.addEventListener("progress", (e) => {
         const event = JSON.parse((e as MessageEvent).data) as ProgressEvent;

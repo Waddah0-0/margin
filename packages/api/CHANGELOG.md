@@ -4,6 +4,21 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Runs can stop to ask a question. A run whose agent asks moves to the new `waiting` status,
+  sends a `question` event and shows the questions in `GET /runs/{run_id}`;
+  `POST /runs/{run_id}/answers` answers them. While waiting, a run gives its place in the
+  queue to others, and it stops after `MARGIN_API_ANSWER_TIMEOUT_S` (an hour) without answers.
+- `last_event` in the run view: the number of the latest event it already includes, so a
+  client can tell replayed events from new ones.
+- The web UI shows an agent's questions as a form on the run page, and every result lists
+  the answers and who gave them.
+
+### Changed
+- `waiting` is a new run status. A client that lists every status must handle it.
+
 ## [0.1.0] - 2026-10-21
 
 ### Added

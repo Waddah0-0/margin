@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { AgentResult, Evidence, Finding, RunView } from "../api/client";
+import type { AgentResult, Answer, Evidence, Finding, RunView } from "../api/client";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import type { IconName } from "../components/icons";
@@ -47,7 +47,7 @@ export function WeightBar({ weight }: { weight: number }) {
   );
 }
 
-function EvidenceRow({ evidence }: { evidence: Evidence }) {
+export function EvidenceRow({ evidence }: { evidence: Evidence }) {
   return (
     <li className={styles.evidence}>
       <span className={styles.kind}>{evidence.kind}</span>
@@ -239,14 +239,43 @@ export function RawResult({ result }: { result: AgentResult }) {
   );
 }
 
-/** The closing sections every view ends with: warnings, run details, raw JSON. */
+export const ANSWERED_BY: Record<Answer["source"], string> = {
+  user: "You",
+  preset: "The run's input",
+  default: "Default, not confirmed",
+};
+
+/** The questions the agent asked during the run, and how each was answered. */
+export function AnswerList({ answers }: { answers: Answer[] }) {
+  return (
+    <ul className={styles.answers}>
+      {answers.map((a) => (
+        <li key={a.question_id} className={styles.answer}>
+          <span className="body-m muted">{a.prompt}</span>
+          <span className="title-m">{a.label}</span>
+          <span className={styles.answeredBy} data-source={a.source}>
+            {ANSWERED_BY[a.source]}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The closing sections every view ends with: warnings, answers, run details, raw JSON. */
 export function ResultFooter({ result }: { result: AgentResult }) {
   const warnings = result.warnings ?? [];
+  const answers = result.metadata?.answers ?? [];
   return (
     <>
       {warnings.length > 0 && (
         <Section title="Warnings" count={warnings.length}>
           <WarningList warnings={warnings} />
+        </Section>
+      )}
+      {answers.length > 0 && (
+        <Section title="Answers" count={answers.length}>
+          <AnswerList answers={answers} />
         </Section>
       )}
       <Section title="Run details">

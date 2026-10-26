@@ -15,13 +15,17 @@ from pathlib import Path
 import pytest
 from echo_agent import EchoAgent
 from margin_cli import main as cli
-from margin_cli.execution import ProgressDisplay, execute_cancellable
+from margin_cli.execution import ProgressDisplay, TerminalQuestions, execute_cancellable
 from margin_core import (
     AgentInput,
     AgentRegistry,
     AgentResult,
     BaseAgent,
+    Choice,
+    NoAnswerError,
     ProgressEvent,
+    Question,
+    QuestionBatch,
     RunContext,
 )
 from margin_core.models import ResultStatus
@@ -332,6 +336,75 @@ def test_progress_display_off_when_not_a_terminal() -> None:
     console = Console(file=io.StringIO(), force_terminal=False)
     with ProgressDisplay(console, "Lister", enabled=True) as callback:
         assert callback is None
+
+
+# ---- run: questions ---------------------------------------------------------------------
+
+
+def test_without_a_terminal_questions_take_their_defaults() -> None:
+    code, out, err = invoke("run", "echo", "hi", "--set", "ask=true")
+    assert code == 0 and "hi" in out
+    assert "| How should the message be echoed? | As typed | default, not confirmed |" in out
+    assert 'Not confirmed: assumed "As typed"' in err
+
+
+def test_answers_can_be_given_up_front() -> None:
+    answers = 'answers={"style": "capitals"}'
+    code, out, err = invoke("run", "echo", "hi", "-s", "ask=true", "-s", answers, "-f", "json")
+    result = json.loads(out)
+    assert code == 0 and result["data"]["echoed"] == "HI"
+    assert result["metadata"]["answers"][0]["source"] == "preset"
+    assert err == ""
+
+
+QUESTIONS = QuestionBatch(
+    title="Check the data",
+    questions=[
+        Question(
+            id="format", prompt="Date format?", default="mdy",
+            choices=[Choice(value="mdy", label="MM/DD"), Choice(value="dmy", label="DD/MM")],
+        ),
+        Question(
+            id="columns", prompt="Columns?", kind="multi_choice", section="Columns",
+            choices=[Choice(value=c, label=c) for c in ("revenue", "cost", "units")],
+        ),
+        Question(id="grain", prompt="One row is?", allow_other=True,
+                 choices=[Choice(value="order", label="An order")]),
+        Question(id="note", prompt="Anything else?", kind="text", required=False),
+    ],
+)  # fmt: skip
+
+
+def ask_in_terminal(typed: str) -> tuple[dict[str, object], str]:
+    console = Console(file=io.StringIO(), force_terminal=False, width=200)
+    asker = TerminalQuestions(console, stream=io.StringIO(typed))
+    answers = asyncio.run(asker(QUESTIONS))
+    return answers, console.file.getvalue()  # type: ignore[attr-defined]
+
+
+def test_terminal_questions_accept_numbers_labels_and_defaults() -> None:
+    answers, shown = ask_in_terminal("\n3,revenue\norder line\n\n")
+    assert answers == {
+        "format": "mdy",  # Enter took the suggestion
+        "columns": ["revenue", "units"],
+        "grain": "order line",  # typed text, allowed by allow_other
+        "note": None,
+    }
+    assert "Check the data" in shown and "Columns" in shown
+    assert "1) MM/DD (suggested)" in shown
+    assert "Choose 1-2 [1]:" in shown and "(optional):" in shown
+
+
+def test_terminal_questions_ask_again_after_a_bad_answer() -> None:
+    answers, shown = ask_in_terminal("7\n2\n\n1\n1\nnote\n")
+    assert answers["format"] == "dmy" and answers["columns"] == ["revenue"]
+    assert "Type a number from 1 to 2" in shown
+    assert "pick at least one" in shown  # an empty answer to a required list
+
+
+def test_terminal_questions_stop_when_input_ends() -> None:
+    with pytest.raises(NoAnswerError, match="input ended"):
+        ask_in_terminal("1\n")
 
 
 SIGINT_SCRIPT = """

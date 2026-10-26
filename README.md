@@ -79,7 +79,9 @@ agent fails.
 
 **The run context.** Every run receives a `RunContext`. It gives the agent the LLM client,
 a progress callback (the CLI can show it as a progress bar, and the API can stream it to a
-browser), a cancellation flag, and a logger.
+browser), a cancellation flag, and a logger. It also lets an agent stop and ask the person
+running it a question instead of guessing. The CLI asks in the terminal, and the web UI
+shows a form on the run page. Every answer is kept in the result, marked with who gave it.
 
 **Loaders.** Agents that work on code never deal with where it came from. A loader turns a
 GitHub URL or a local path into a `Workspace`: the files worth analysing, the files that

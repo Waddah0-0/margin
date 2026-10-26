@@ -296,6 +296,43 @@ details[open] > summary .chevron {
   color: var(--tertiary);
 }
 
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.answer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: var(--shape-lg);
+  background: var(--surface-container-low);
+}
+
+.answeredBy {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 0 10px;
+  border-radius: var(--shape-full);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+/* an assumption nobody confirmed is the one that deserves a second look */
+.answeredBy[data-source="default"] {
+  background: var(--marker);
+  color: var(--on-surface);
+}
+
 .details {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

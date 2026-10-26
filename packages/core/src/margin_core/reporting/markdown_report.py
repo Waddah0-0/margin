@@ -7,6 +7,7 @@ from pathlib import Path
 from margin_core.models import AgentResult, Evidence
 
 _STATUS_LABEL = {"ok": "ok", "partial": "partial", "error": "error"}
+_ANSWERED_BY = {"user": "you", "preset": "the run's input", "default": "default, not confirmed"}
 
 
 def _cell(text: object) -> str:
@@ -56,6 +57,14 @@ def to_markdown(result: AgentResult) -> str:
         md.append("")
 
     meta = result.metadata
+    if meta.answers:
+        md += ["## Answers", "", "| Question | Answer | Given by |", "|---|---|---|"]
+        md += [
+            f"| {_cell(a.prompt)} | {_cell(a.label)} | {_ANSWERED_BY.get(a.source, a.source)} |"
+            for a in meta.answers
+        ]
+        md.append("")
+
     rows: list[tuple[str, object]] = []
     if meta.duration_s is not None:
         rows.append(("Duration", f"{meta.duration_s:.2f}s"))
