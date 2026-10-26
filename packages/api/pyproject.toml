@@ -20,7 +20,7 @@ classifiers = [
     "Environment :: Web Environment",
 ]
 dependencies = [
-    "margin-core>=0.1.0,<0.2",
+    "margin-core>=0.1.2,<0.2",  # 0.1.2: questions (ctx.ask)
     "fastapi>=0.111.0",
     "uvicorn>=0.30.0",
     "sse-starlette>=2.1.0",

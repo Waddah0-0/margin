@@ -13,6 +13,8 @@ dev = [
     "ruff>=0.6.0",
     "mypy>=1.10.0",
     "pre-commit>=3.7.0",
+    "pandas-stubs>=3.0.5.260914",
+    "types-openpyxl>=3.1.5.20261017",
 ]
 
 [tool.margin]
@@ -31,6 +33,7 @@ margin-cli = { workspace = true }
 margin-api = { workspace = true }
 margin-ai-code-detector = { workspace = true }
 margin-echo = { workspace = true }
+margin-data-storyteller = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -56,6 +59,7 @@ mypy_path = [
     "packages/api/src",
     "agents/ai_code_detector/src",
     "agents/echo/src",
+    "agents/data_storyteller/src",
 ]
 strict = true
 warn_return_any = true

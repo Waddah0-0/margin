@@ -189,8 +189,8 @@ async def test_without_anyone_to_ask_defaults_are_assumed_and_flagged() -> None:
     assert result.data["answers"] == {"date_format": "mdy", "columns": ["revenue"], "context": None}
     assert all(a.source == "default" for a in result.metadata.answers)
     assert result.warnings == [
-        'Not confirmed: assumed "MM/DD/YYYY" for "Which date format does order_date use?"',
-        'Not confirmed: assumed "Revenue" for "Which columns matter?"',
+        "Not confirmed: Which date format does order_date use? Assumed: MM/DD/YYYY.",
+        "Not confirmed: Which columns matter? Assumed: Revenue.",
     ]
 
 

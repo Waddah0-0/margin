@@ -174,7 +174,7 @@ class RunContext:
                 answer = Answer.of(question, question.check(question.default), "default")
                 answers[question.id] = answer
                 if question.default is not None:
-                    self.warn(f'Not confirmed: assumed "{answer.label}" for "{question.prompt}"')
+                    self.warn(f"Not confirmed: {question.prompt} Assumed: {answer.label}.")
 
         ordered = {q.id: answers[q.id] for q in batch.questions}
         self.answers.extend(ordered.values())

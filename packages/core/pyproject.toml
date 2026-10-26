@@ -1,6 +1,6 @@
 [project]
 name = "margin-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "The shared core of margin: the agent contract, results with evidence, model clients and code loaders."
 readme = "README.md"
 requires-python = ">=3.11"

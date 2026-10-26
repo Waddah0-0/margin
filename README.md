@@ -141,6 +141,7 @@ Click an agent's name for what it does, how to use it, and its limits.
 |---|---|---|
 | [AI Code Detector](agents/ai_code_detector/README.md) | Estimates how likely a codebase was written with AI assistance, and shows the evidence. | Experimental |
 | [Echo](agents/echo/README.md) | Echoes its input back. A reference agent for testing and for copying when you write a new one. | Ready |
+| [Data Storyteller](agents/data_storyteller/README.md) | Cleans a table of data and explains every change; the story and charts come next. | Planned |
 
 ## Status
 

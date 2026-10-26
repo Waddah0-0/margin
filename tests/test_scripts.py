@@ -61,7 +61,11 @@ def _scaffold(root: Path, agent_id: str = "license-checker") -> Path:
 
 
 def test_real_agents_follow_the_standard() -> None:
-    assert check_agents.check_all(REAL_ROOT) == {"ai_code_detector": [], "echo": []}
+    assert check_agents.check_all(REAL_ROOT) == {
+        "ai_code_detector": [],
+        "data_storyteller": [],
+        "echo": [],
+    }
 
 
 def test_scaffolded_agent_passes_the_check(fake_root: Path) -> None:

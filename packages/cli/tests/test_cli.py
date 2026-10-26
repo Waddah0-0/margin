@@ -345,7 +345,7 @@ def test_without_a_terminal_questions_take_their_defaults() -> None:
     code, out, err = invoke("run", "echo", "hi", "--set", "ask=true")
     assert code == 0 and "hi" in out
     assert "| How should the message be echoed? | As typed | default, not confirmed |" in out
-    assert 'Not confirmed: assumed "As typed"' in err
+    assert "Not confirmed: How should the message be echoed? Assumed: As typed." in err
 
 
 def test_answers_can_be_given_up_front() -> None:

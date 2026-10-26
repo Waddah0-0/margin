@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 # a test fixture and template: PyPI rejects this classifier, so it can never be uploaded
 classifiers = ["Private :: Do Not Upload"]
 dependencies = [
-    "margin-core>=0.1.0,<0.2",
+    "margin-core>=0.1.2,<0.2",  # 0.1.2: questions (ctx.ask)
 ]
 
 [project.entry-points."margin.agents"]
