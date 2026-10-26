@@ -225,5 +225,8 @@ def test_only_working_agents_with_a_mirror_key_are_targets() -> None:
     assert mirror_agents.mirror_targets(REAL_ROOT) == [
         mirror_agents.MirrorTarget(
             "ai-code-detector", "agents/ai_code_detector", "Waddah0-0/margin-ai-code-detector"
-        )
+        ),
+        mirror_agents.MirrorTarget(
+            "data-storyteller", "agents/data_storyteller", "Waddah0-0/margin-data-storyteller"
+        ),
     ]  # echo is never mirrored
