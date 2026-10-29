@@ -75,6 +75,8 @@ tmp/
 
 # Private planning notes (kept locally, not published)
 PLAN.md
+# notes for Claude Code sessions; a CLAUDE.md in the repo is one of the detector's markers
+CLAUDE.md
 
 # the web UI bundled into margin-api at release time (scripts/build_release.py)
 packages/api/src/margin_api/ui/
