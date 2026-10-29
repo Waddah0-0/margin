@@ -425,7 +425,7 @@ requires-dist = [
 
 [[package]]
 name = "margin-api"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/api" }
 dependencies = [
     { name = "fastapi" },
@@ -448,7 +448,7 @@ requires-dist = [
 
 [[package]]
 name = "margin-cli"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/cli" }
 dependencies = [
     { name = "margin-core" },

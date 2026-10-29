@@ -1,7 +1,7 @@
 # Releasing
 
-margin publishes four packages to PyPI: `margin-core`, `margin-cli`, `margin-api` (which
-bundles the web UI) and `margin-ai-code-detector`. Anything marked
+margin publishes five packages to PyPI: `margin-core`, `margin-cli`, `margin-api` (which
+bundles the web UI), `margin-ai-code-detector` and `margin-data-storyteller`. Anything marked
 `Private :: Do Not Upload` (the echo fixture, and every new agent until it is ready) is never
 uploaded.
 
@@ -16,7 +16,7 @@ publisher** and add one entry per package:
 
 | Field | Value |
 |---|---|
-| PyPI project name | `margin-core`, then `margin-cli`, `margin-api`, `margin-ai-code-detector` |
+| PyPI project name | `margin-core`, then `margin-cli`, `margin-api`, `margin-ai-code-detector`, `margin-data-storyteller` |
 | Owner | `Waddah0-0` |
 | Repository name | `margin` |
 | Workflow name | `release.yml` |

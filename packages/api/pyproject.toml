@@ -1,6 +1,6 @@
 [project]
 name = "margin-api"
-version = "0.1.0"
+version = "0.1.1"
 description = "margin's HTTP API and web UI: run agents in the background, follow them live, read their evidence."
 readme = "README.md"
 requires-python = ">=3.11"

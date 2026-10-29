@@ -211,6 +211,9 @@ Without cloning anything, with Python 3.11 or newer:
 pip install margin-cli margin-ai-code-detector    # the command line, and the detector
 margin run ai-code-detector https://github.com/psf/requests
 
+pip install margin-data-storyteller               # the Data Storyteller
+margin run data-storyteller sales.csv --set stop_after=story
+
 pip install margin-api                            # the web UI and HTTP API
 margin-api                                        # then open http://127.0.0.1:8000
 ```

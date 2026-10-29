@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 from echo_agent import EchoAgent
+from margin_cli import __version__
 from margin_cli import main as cli
 from margin_cli.execution import ProgressDisplay, TerminalQuestions, execute_cancellable
 from margin_core import (
@@ -111,7 +112,7 @@ def invoke(*args: str) -> tuple[int, str, str]:
 
 def test_version() -> None:
     code, out, _ = invoke("version")
-    assert code == 0 and out.startswith("margin-cli v0.1.0 (core v")
+    assert code == 0 and out.startswith(f"margin-cli v{__version__} (core v")
 
 
 def test_list_table_and_load_errors() -> None:

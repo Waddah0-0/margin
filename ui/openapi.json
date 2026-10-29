@@ -1217,7 +1217,7 @@
   "info": {
     "description": "Run any installed margin agent over HTTP. Runs are asynchronous: start one, then poll it or follow its events (server-sent events) until the result arrives.",
     "title": "margin API",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "openapi": "3.1.0",
   "paths": {
