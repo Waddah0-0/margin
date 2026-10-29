@@ -11,6 +11,7 @@ import type { AgentInfo, AgentResult, RunView } from "../api/client";
 import { DetectorIntro } from "./detector/DetectorIntro";
 import { DetectorResult } from "./detector/DetectorResult";
 import { GenericResult } from "./GenericResult";
+import { StorytellerResult } from "./storyteller/StorytellerResult";
 
 export interface ResultViewProps {
   run: RunView;
@@ -21,7 +22,10 @@ export interface AgentIntroProps {
   agent: AgentInfo;
 }
 
-const views = new Map<string, ComponentType<ResultViewProps>>([["ai-code-detector", DetectorResult]]);
+const views = new Map<string, ComponentType<ResultViewProps>>([
+  ["ai-code-detector", DetectorResult],
+  ["data-storyteller", StorytellerResult],
+]);
 const intros = new Map<string, ComponentType<AgentIntroProps>>([["ai-code-detector", DetectorIntro]]);
 
 export function registerResultView(agentId: string, view: ComponentType<ResultViewProps>): void {
