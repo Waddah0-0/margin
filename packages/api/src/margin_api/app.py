@@ -350,6 +350,7 @@ class _UIPages:
     """
 
     API_PAGES = ("/docs", "/redoc", "/openapi.json")
+    PAGE_HEADERS = {"Vary": "Accept", "Cache-Control": "no-cache"}
 
     def __init__(self, app: Any, root: Path) -> None:
         self.app = app
@@ -364,7 +365,10 @@ class _UIPages:
             if "text/html" in accept and not path.startswith(self.API_PAGES):
                 candidate = (self.root / path.lstrip("/")).resolve()
                 if not (candidate.is_file() and self.root in candidate.parents):
-                    await FileResponse(self.index)(scope, receive, send)
+                    # the page shares its URL with the API's JSON: without Vary the browser
+                    # would answer the UI's own fetch of /runs/<id> with this cached page
+                    page = FileResponse(self.index, headers=self.PAGE_HEADERS)
+                    await page(scope, receive, send)
                     return
         await self.app(scope, receive, send)
 

@@ -481,7 +481,11 @@ def test_serves_the_ui_alongside_the_api(tmp_path: Path) -> None:
     page = {"accept": "text/html,application/xhtml+xml"}
     with TestClient(app, base_url="http://127.0.0.1") as c:
         assert "margin ui" in c.get("/", headers=page).text
-        assert "margin ui" in c.get("/runs/abc123", headers=page).text  # a deep link loads the UI
+        deep = c.get("/runs/abc123", headers=page)
+        assert "margin ui" in deep.text  # a deep link loads the UI
+        # ...and is never reused for the UI's own JSON request to the same URL
+        assert deep.headers["vary"] == "Accept"
+        assert deep.headers["cache-control"] == "no-cache"
         assert c.get("/assets/app.js").text == "console.log(1)"
         assert c.get("/agents").json()["agents"]  # the UI's own requests still reach the API
         assert c.get("/runs/abc123").status_code == 404

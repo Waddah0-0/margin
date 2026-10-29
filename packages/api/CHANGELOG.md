@@ -19,6 +19,11 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 - `waiting` is a new run status. A client that lists every status must handle it.
 
+### Fixed
+- Opening a run page directly (a link or a reload) with the UI served by the API showed
+  "Can't reach the API": the browser answered the UI's own request for the run with the
+  cached page. Page loads now send `Vary: Accept` and `Cache-Control: no-cache`.
+
 ## [0.1.0] - 2026-10-21
 
 ### Added
