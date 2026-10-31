@@ -1,9 +1,16 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { AgentResult, Answer, Evidence, Finding, RunView } from "../api/client";
-import { Button } from "../components/Button";
+import {
+  type AgentResult,
+  type Answer,
+  type Evidence,
+  type Finding,
+  type RunView,
+  runFileUrl,
+} from "../api/client";
+import { AnchorButton, Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import type { IconName } from "../components/icons";
-import { download, duration } from "../lib/format";
+import { download, duration, fileSize } from "../lib/format";
 import styles from "./GenericResult.module.css";
 import { JsonTree } from "./JsonTree";
 import { toMarkdown } from "./markdown";
@@ -118,6 +125,20 @@ export function ExportButtons({ run, result }: { run: RunView; result: AgentResu
   const base = `${result.agent_id}-${run.run_id.slice(0, 8)}`;
   return (
     <div className={styles.exports}>
+      {/* files the run wrote (a cleaned table, ...) come first: they are the run's own output */}
+      {(run.files ?? []).map((f) => (
+        <AnchorButton
+          key={f.name}
+          variant="filled"
+          size="s"
+          icon="download"
+          href={runFileUrl(run.run_id, f.name)}
+          download={f.name}
+          title={`${f.name}, ${fileSize(f.size)}`}
+        >
+          {f.name}
+        </AnchorButton>
+      ))}
       <Button
         variant="outlined"
         size="s"

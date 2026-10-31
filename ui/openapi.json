@@ -923,6 +923,24 @@
         "title": "RunCreated",
         "type": "object"
       },
+      "RunFile": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size"
+        ],
+        "title": "RunFile",
+        "type": "object"
+      },
       "RunMetadata": {
         "additionalProperties": false,
         "description": "Execution metadata attached to every result.",
@@ -1028,6 +1046,14 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "files": {
+            "description": "Files the run wrote to its own folder; download from /runs/{id}/files/{name}.",
+            "items": {
+              "$ref": "#/components/schemas/RunFile"
+            },
+            "title": "Files",
+            "type": "array"
           },
           "finished_at": {
             "anyOf": [
@@ -1170,6 +1196,30 @@
           }
         },
         "title": "TokenUsage",
+        "type": "object"
+      },
+      "Upload": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "description": "Where the file was saved; give this to the agent's input.",
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "size"
+        ],
+        "title": "Upload",
         "type": "object"
       },
       "ValidationError": {
@@ -1611,6 +1661,54 @@
         ]
       }
     },
+    "/runs/{run_id}/files/{name}": {
+      "get": {
+        "description": "Download a file the run wrote to its own folder (see the run's ``files``).",
+        "operationId": "run_file_runs__run_id__files__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such file in the run's folder"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run File",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/settings/llm": {
       "get": {
         "operationId": "get_llm_settings_settings_llm_get",
@@ -1756,6 +1854,67 @@
         "summary": "Test Connection",
         "tags": [
           "settings"
+        ]
+      }
+    },
+    "/uploads": {
+      "post": {
+        "description": "Save a file for a run to read. Send the file as the raw request body.\n\nThe response's ``path`` goes into the agent's input. Uploads are deleted after the\nresult TTL.",
+        "operationId": "upload_uploads_post",
+        "parameters": [
+          {
+            "description": "The file's name.",
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "description": "The file's name.",
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "description": "The file is larger than MARGIN_API_MAX_UPLOAD_BYTES"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload",
+        "tags": [
+          "files"
         ]
       }
     }

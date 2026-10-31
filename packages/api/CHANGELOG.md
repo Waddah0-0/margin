@@ -4,6 +4,21 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Uploads: `POST /uploads?name=<file>` saves the request body as a file and returns its path,
+  for an agent's input. Uploads have their own size limit, `MARGIN_API_MAX_UPLOAD_BYTES`
+  (200 MB), and are deleted after the result TTL.
+- Run files: an input field marked `"format": "output-dir"` and left empty gets a folder of
+  the run's own. The run view lists what the run wrote there (`files`), and
+  `GET /runs/{run_id}/files/{name}` downloads it. The folder goes when the run is forgotten.
+- `MARGIN_API_FILES_DIR` sets where uploads and run files are kept (a temporary folder,
+  removed on shutdown, when not set).
+- The web UI uploads a file for an input field marked `"format": "file-path"` (drop it or
+  choose it, on the agent page and in the home page launcher), and offers a run's files for
+  download next to the JSON and Markdown exports.
+
 ## [0.1.1] - 2026-10-29
 
 ### Added

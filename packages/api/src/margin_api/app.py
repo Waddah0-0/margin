@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import re
+import shutil
+import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -33,6 +36,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sse_starlette.sse import EventSourceResponse
 
 from margin_api import __version__
+from margin_api.files import OUTPUT_FORMAT, FileStore, RunFile, fields_with_format
 from margin_api.jobs import NotWaitingError, Run, RunManager, RunStatus
 from margin_api.llm_settings import router as llm_settings_router
 from margin_api.settings import ApiSettings, load_settings
@@ -81,6 +85,16 @@ class RunView(BaseModel):
     last_event: int = Field(
         default=0, description="Number of the latest event; this view already includes it."
     )
+    files: list[RunFile] = Field(
+        default_factory=list,
+        description="Files the run wrote to its own folder; download from /runs/{id}/files/{name}.",
+    )
+
+
+class Upload(BaseModel):
+    path: str = Field(description="Where the file was saved; give this to the agent's input.")
+    name: str
+    size: int
 
 
 class AnswersBody(BaseModel):
@@ -100,12 +114,17 @@ class _BodyLimit:
     error raised while the app reads its body would be reported as a generic 400.
     """
 
-    def __init__(self, app: Any, limit: int) -> None:
+    def __init__(self, app: Any, limit: int, exempt: tuple[str, ...] = ()) -> None:
         self.app = app
         self.limit = limit
+        self.exempt = exempt  # paths that stream their body and limit it themselves
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get("method") in {"GET", "HEAD", "DELETE", "OPTIONS"}:
+        if (
+            scope["type"] != "http"
+            or scope.get("method") in {"GET", "HEAD", "DELETE", "OPTIONS"}
+            or scope.get("path") in self.exempt
+        ):
             await self.app(scope, receive, send)
             return
         headers = dict(scope.get("headers") or [])
@@ -161,7 +180,13 @@ def create_app(
 ) -> FastAPI:
     settings = settings or load_settings()
     registry = registry or default_registry()
-    manager = RunManager(registry, settings)
+    store = FileStore(settings.files_dir)
+    manager = RunManager(
+        registry,
+        settings,
+        on_forget=store.forget_run,
+        on_sweep=lambda: store.sweep_uploads(settings.result_ttl_s),
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -170,6 +195,7 @@ def create_app(
             yield
         finally:
             await manager.stop()
+            store.close()
 
     app = FastAPI(
         title="margin API",
@@ -187,7 +213,7 @@ def create_app(
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Content-Type", "Last-Event-ID"],
     )
-    app.add_middleware(_BodyLimit, limit=settings.max_body_bytes)
+    app.add_middleware(_BodyLimit, limit=settings.max_body_bytes, exempt=("/uploads",))
     ui_dir = Path(settings.ui_dir) if settings.ui_dir else _bundled_ui()
     ui_root = _ui_root(ui_dir) if ui_dir is not None else None
     if ui_root is not None:
@@ -219,6 +245,7 @@ def create_app(
             created_at=run.created_at, started_at=run.started_at,
             finished_at=run.finished_at, result=run.result,
             llm=llm, question=run.question, last_event=run.last_event,
+            files=store.run_files(run.id) if run.status == "done" else [],
         )  # fmt: skip
 
     @app.get("/health", tags=["meta"])
@@ -252,6 +279,11 @@ def create_app(
         ),
     ) -> RunCreated:
         cls = agent_class(agent_id)
+        run_id = uuid.uuid4().hex
+        # an output folder left empty becomes the run's own, so its files can be downloaded
+        for name in fields_with_format(cls.InputModel.model_json_schema(), OUTPUT_FORMAT):
+            if body.get(name) in (None, ""):
+                body = {**body, name: str(store.run_dir(run_id))}
         try:
             parsed = cls.parse_input(body)
         except InputValidationError as exc:
@@ -265,7 +297,7 @@ def create_app(
                 if provider or model:  # a choice made for this run must work, or say why
                     raise HTTPException(422, f"Cannot use that model: {exc}") from exc
                 logger.warning("No model client for %s: %s", agent_id, exc)
-        run = manager.submit(cls, parsed, llm=llm, provider=resolved)
+        run = manager.submit(cls, parsed, llm=llm, provider=resolved, run_id=run_id)
         return RunCreated(
             run_id=run.id,
             status=run.status,
@@ -310,6 +342,65 @@ def create_app(
         return view(run)
 
     @app.get(
+        "/runs/{run_id}/files/{name}",
+        tags=["runs"],
+        response_class=FileResponse,
+        responses={404: {"description": "No such file in the run's folder"}},
+    )
+    def run_file(run_id: str, name: str) -> FileResponse:
+        """Download a file the run wrote to its own folder (see the run's ``files``)."""
+        run = find_run(run_id)
+        path = store.run_file(run.id, name)
+        if path is None:
+            raise HTTPException(404, f"Run {run_id!r} has no file {name!r}")
+        return FileResponse(path, filename=path.name)
+
+    @app.post(
+        "/uploads",
+        status_code=201,
+        response_model=Upload,
+        tags=["files"],
+        openapi_extra={
+            "requestBody": {
+                "required": True,
+                "content": {
+                    "application/octet-stream": {"schema": {"type": "string", "format": "binary"}}
+                },
+            }
+        },
+        responses={413: {"description": "The file is larger than MARGIN_API_MAX_UPLOAD_BYTES"}},
+    )
+    async def upload(
+        request: Request,
+        name: str = Query(min_length=1, max_length=255, description="The file's name."),
+    ) -> Upload:
+        """Save a file for a run to read. Send the file as the raw request body.
+
+        The response's ``path`` goes into the agent's input. Uploads are deleted after the
+        result TTL.
+        """
+        limit = settings.max_upload_bytes
+        declared = request.headers.get("content-length", "")
+        too_big = f"The file is larger than the {limit // 1_000_000} MB limit"
+        if declared.isdigit() and int(declared) > limit:
+            raise HTTPException(413, too_big)
+        path = store.new_upload(name)
+        size = 0
+        try:
+            with path.open("wb") as out:
+                async for chunk in request.stream():
+                    size += len(chunk)
+                    if size > limit:
+                        raise HTTPException(413, too_big)
+                    out.write(chunk)
+            if size == 0:
+                raise HTTPException(422, "The file is empty")
+        except BaseException:
+            shutil.rmtree(path.parent, ignore_errors=True)
+            raise
+        return Upload(path=str(path), name=path.name, size=size)
+
+    @app.get(
         "/runs/{run_id}/events",
         tags=["runs"],
         response_class=EventSourceResponse,
@@ -350,6 +441,7 @@ class _UIPages:
     """
 
     API_PAGES = ("/docs", "/redoc", "/openapi.json")
+    DOWNLOADS = re.compile(r"^/runs/[^/]+/files/")  # a download link also asks for HTML
     PAGE_HEADERS = {"Vary": "Accept", "Cache-Control": "no-cache"}
 
     def __init__(self, app: Any, root: Path) -> None:
@@ -362,7 +454,11 @@ class _UIPages:
             headers = dict(scope.get("headers") or [])
             accept = headers.get(b"accept", b"").decode("latin-1")
             path = str(scope.get("path", "/"))
-            if "text/html" in accept and not path.startswith(self.API_PAGES):
+            if (
+                "text/html" in accept
+                and not path.startswith(self.API_PAGES)
+                and not self.DOWNLOADS.match(path)
+            ):
                 candidate = (self.root / path.lstrip("/")).resolve()
                 if not (candidate.is_file() and self.root in candidate.parents):
                     # the page shares its URL with the API's JSON: without Vary the browser

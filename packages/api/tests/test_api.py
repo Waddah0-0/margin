@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import time
 from collections.abc import Iterator
 from importlib.metadata import EntryPoint
@@ -14,6 +15,7 @@ import pytest
 from echo_agent import EchoAgent
 from fastapi.testclient import TestClient
 from margin_api.app import create_app
+from margin_api.files import FileStore, safe_name
 from margin_api.settings import ApiSettings
 from margin_core import (
     AgentInput,
@@ -26,7 +28,7 @@ from margin_core import (
 )
 from margin_core.llm import LLMClient, create_llm
 from margin_core.registry import ENTRY_POINT_GROUP
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SlowInput(AgentInput):
@@ -79,10 +81,39 @@ class Asking(Gpu):
         return await super().run(input, ctx)
 
 
+class CopyInput(AgentInput):
+    source: str = Field(json_schema_extra={"format": "file-path"})
+    out: str | None = Field(default=None, json_schema_extra={"format": "output-dir"})
+
+
+class CopyOutput(BaseModel):
+    written: list[str]
+
+
+class Copier(BaseAgent):
+    """Reads a file (as an upload would give it) and writes a copy to its output folder."""
+
+    id = "copier"
+    name = "Copier"
+    description = "Copies a file."
+    version = "0.0.1"
+    InputModel = CopyInput
+    OutputModel = CopyOutput
+
+    async def run(self, input: CopyInput, ctx: RunContext) -> AgentResult:
+        written = []
+        if input.out:
+            target = Path(input.out) / "copy.txt"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copyfile, input.source, target)
+            written.append(str(target))
+        return self.make_result(summary="copied", output=CopyOutput(written=written))
+
+
 def _registry() -> AgentRegistry:
     broken = EntryPoint(name="broken", value="no_such_module:Agent", group=ENTRY_POINT_GROUP)
     registry = AgentRegistry([broken])
-    for agent in (EchoAgent, Slow, Stubborn, Gpu, Asking):
+    for agent in (EchoAgent, Slow, Stubborn, Gpu, Asking, Copier):
         registry.register(agent)
     return registry
 
@@ -148,7 +179,14 @@ def test_health(client: TestClient) -> None:
 
 def test_list_and_describe_agents(client: TestClient) -> None:
     body = client.get("/agents").json()
-    assert [a["id"] for a in body["agents"]] == ["asking", "echo", "gpu", "slow", "stubborn"]
+    assert [a["id"] for a in body["agents"]] == [
+        "asking",
+        "copier",
+        "echo",
+        "gpu",
+        "slow",
+        "stubborn",
+    ]
     assert "broken" in body["load_errors"]
     echo = client.get("/agents/echo").json()
     assert echo["primary_input"] == "message" and echo["uses_llm"] is False
@@ -492,6 +530,11 @@ def test_serves_the_ui_alongside_the_api(tmp_path: Path) -> None:
         assert "swagger" in c.get("/docs", headers=page).text.lower()  # API docs stay reachable
         assert c.get("/../pyproject.toml", headers=page).status_code in (200, 404)
         assert "margin ui" in c.get("/%2e%2e/secret", headers=page).text  # no escape from ui_dir
+        # a download link asks for HTML too, but must get the file, not the UI
+        path = c.post("/uploads?name=a.txt", content=b"hello").json()["path"]
+        run_id = start(c, "copier", {"source": path})
+        wait_for(c, run_id, {"done"})
+        assert c.get(f"/runs/{run_id}/files/copy.txt", headers=page).content == b"hello"
 
 
 def test_ui_dir_without_index_is_refused(tmp_path: Path) -> None:
@@ -514,3 +557,99 @@ def test_live_events_still_stream_when_the_ui_is_served(tmp_path: Path) -> None:
         ) as events:
             body = "".join(events.iter_text())
         assert "event: result" in body
+
+
+# ---- uploads and run files -----------------------------------------------------------------
+
+
+@pytest.fixture
+def files_client(tmp_path: Path) -> Iterator[TestClient]:
+    with make_client(files_dir=str(tmp_path), max_upload_bytes=10_000) as c:
+        yield c
+
+
+def test_an_uploaded_file_is_read_and_the_run_files_downloaded(
+    files_client: TestClient, tmp_path: Path
+) -> None:
+    data = b"a,b\n1,2\n" * 300  # bigger than max_body_bytes: uploads have their own limit
+    up = files_client.post("/uploads?name=sales.csv", content=data)
+    assert up.status_code == 201, up.text
+    saved = Path(up.json()["path"])
+    assert up.json()["name"] == "sales.csv" and up.json()["size"] == len(data)
+    assert saved.read_bytes() == data and tmp_path / "uploads" in saved.parents
+
+    run_id = start(files_client, "copier", {"source": str(saved)})
+    view = wait_for(files_client, run_id, {"done"})
+    assert view["files"] == [{"name": "copy.txt", "size": len(data)}]
+    download = files_client.get(f"/runs/{run_id}/files/copy.txt")
+    assert download.content == data
+    assert "attachment" in download.headers["content-disposition"]
+
+
+def test_an_output_folder_given_with_the_run_is_left_alone(
+    files_client: TestClient, tmp_path: Path
+) -> None:
+    source = tmp_path / "in.txt"
+    source.write_text("x")
+    run_id = start(files_client, "copier", {"source": str(source), "out": str(tmp_path / "mine")})
+    view = wait_for(files_client, run_id, {"done"})
+    assert (tmp_path / "mine" / "copy.txt").exists()
+    assert view["files"] == []  # only the run's own folder is served
+
+
+def test_uploads_over_the_limit_or_empty_are_refused_and_not_kept(
+    files_client: TestClient, tmp_path: Path
+) -> None:
+    assert files_client.post("/uploads?name=big.csv", content=b"x" * 10_001).status_code == 413
+
+    def chunks() -> Iterator[bytes]:  # no content-length: the limit holds while streaming
+        for _ in range(20):
+            yield b"x" * 1000
+
+    assert files_client.post("/uploads?name=big.csv", content=chunks()).status_code == 413
+    assert files_client.post("/uploads?name=empty.csv", content=b"").status_code == 422
+    assert list((tmp_path / "uploads").iterdir()) == []
+
+
+def test_upload_names_cannot_leave_the_upload_folder(
+    files_client: TestClient, tmp_path: Path
+) -> None:
+    up = files_client.post("/uploads", params={"name": "../../evil.txt"}, content=b"x").json()
+    assert up["name"] == "evil.txt"
+    assert (tmp_path / "uploads") in Path(up["path"]).parents
+    assert safe_name("..\\a\\b.csv") == "b.csv"
+    assert safe_name("sales; rm -rf.csv") == "sales_ rm -rf.csv"
+    assert safe_name("مبيعات.xlsx") == "مبيعات.xlsx"  # letters of any script are kept
+    assert safe_name("..") == "upload"
+
+
+def test_only_a_runs_own_files_can_be_downloaded(files_client: TestClient, tmp_path: Path) -> None:
+    (tmp_path / "secret.txt").write_text("no")
+    source = tmp_path / "in.txt"
+    source.write_text("x")
+    run_id = start(files_client, "copier", {"source": str(source)})
+    wait_for(files_client, run_id, {"done"})
+    for name in ("../../secret.txt", "..%2F..%2Fsecret.txt", "nope.txt", "copy.txt.bak"):
+        assert files_client.get(f"/runs/{run_id}/files/{name}").status_code == 404, name
+    assert files_client.get("/runs/unknown/files/copy.txt").status_code == 404
+
+
+def test_files_go_when_their_run_or_upload_expires(tmp_path: Path) -> None:
+    with make_client(files_dir=str(tmp_path), result_ttl_s=0.0) as c:
+        up = Path(c.post("/uploads?name=a.txt", content=b"x").json()["path"])
+        run_id = start(c, "copier", {"source": str(up)})
+        wait_for(c, run_id, {"done"})
+        assert (tmp_path / "runs" / run_id / "copy.txt").exists()
+        time.sleep(0.05)
+        c.app.state.manager.sweep()  # type: ignore[attr-defined]
+        assert not (tmp_path / "runs" / run_id).exists()
+        assert not up.exists()
+
+
+def test_the_file_store_removes_only_a_folder_it_made(tmp_path: Path) -> None:
+    given = FileStore(str(tmp_path))
+    given.close()
+    assert tmp_path.exists()
+    own = FileStore()
+    own.close()
+    assert not own.root.exists()

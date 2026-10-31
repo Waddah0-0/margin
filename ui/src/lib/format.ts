@@ -46,3 +46,16 @@ export function download(filename: string, text: string, type: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** 1234567 -> "1.2 MB" */
+export function fileSize(bytes: number): string {
+  if (bytes < 1000) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let n = bytes / 1000;
+  let unit = 0;
+  while (n >= 1000 && unit < units.length - 1) {
+    n /= 1000;
+    unit += 1;
+  }
+  return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${units[unit]}`;
+}

@@ -144,6 +144,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/files/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run File
+         * @description Download a file the run wrote to its own folder (see the run's ``files``).
+         */
+        get: operations["run_file_runs__run_id__files__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/settings/llm": {
         parameters: {
             query?: never;
@@ -190,6 +210,29 @@ export interface paths {
         put?: never;
         /** Test Connection */
         post: operations["test_connection_settings_llm_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload
+         * @description Save a file for a run to read. Send the file as the raw request body.
+         *
+         *     The response's ``path`` goes into the agent's input. Uploads are deleted after the
+         *     result TTL.
+         */
+        post: operations["upload_uploads_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -629,6 +672,13 @@ export interface components {
              */
             status: "queued" | "running" | "waiting" | "done" | "cancelled";
         };
+        /** RunFile */
+        RunFile: {
+            /** Name */
+            name: string;
+            /** Size */
+            size: number;
+        };
         /**
          * RunMetadata
          * @description Execution metadata attached to every result.
@@ -669,6 +719,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Files
+             * @description Files the run wrote to its own folder; download from /runs/{id}/files/{name}.
+             */
+            files?: components["schemas"]["RunFile"][];
             /** Finished At */
             finished_at: string | null;
             /**
@@ -724,6 +779,18 @@ export interface components {
              * @default 0
              */
             output_tokens: number;
+        };
+        /** Upload */
+        Upload: {
+            /** Name */
+            name: string;
+            /**
+             * Path
+             * @description Where the file was saved; give this to the agent's input.
+             */
+            path: string;
+            /** Size */
+            size: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1022,6 +1089,43 @@ export interface operations {
             };
         };
     };
+    run_file_runs__run_id__files__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such file in the run's folder */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_llm_settings_settings_llm_get: {
         parameters: {
             query?: never;
@@ -1127,6 +1231,49 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ConnectionResult"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_uploads_post: {
+        parameters: {
+            query: {
+                /** @description The file's name. */
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upload"];
+                };
+            };
+            /** @description The file is larger than MARGIN_API_MAX_UPLOAD_BYTES */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

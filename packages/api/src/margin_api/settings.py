@@ -19,6 +19,9 @@ class ApiSettings(BaseSettings):
     # A built web UI (ui/dist) to serve from the same address, so one server is the whole app.
     ui_dir: str | None = None
     max_body_bytes: int = 1_000_000
+    # uploads from the web UI and the files runs write; a temporary folder when not set
+    files_dir: str | None = None
+    max_upload_bytes: int = 200_000_000
     llm_concurrency: int = 1  # runs of agents that use a model (a local model has one GPU)
     other_concurrency: int = 4  # runs of agents that do not
     result_ttl_s: float = 3600.0  # finished runs are forgotten after this

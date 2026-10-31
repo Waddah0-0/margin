@@ -1,10 +1,11 @@
 /**
- * The home page's pill-shaped launcher: pick an agent, type its main input, go. Agents
- * without a main input (or anyone wanting more options) continue on the agent's page.
+ * The home page's pill-shaped launcher: pick an agent, type its main input, go. When the
+ * main input is a file, choose (or drop) one instead: it is uploaded, then the run starts.
+ * Agents without a main input (or anyone wanting more options) continue on the agent's page.
  */
-import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import { type DragEvent, type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { AgentInfo } from "../api/client";
+import { type AgentInfo, uploadFile } from "../api/client";
 import { startRun } from "../form/SchemaForm";
 import { fieldsFromSchema } from "../form/schema";
 import { AgentAvatar } from "./AgentAvatar";
@@ -40,11 +41,13 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
   const [text, setText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState<{ name: string; fraction: number }>();
   const [error, setError] = useState<string>();
   const menuId = useId();
   const pickerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const agent = agents.find((a) => a.id === agentId);
   const primary = agent
@@ -71,8 +74,46 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
 
   if (!agent) return null;
 
+  const go = async (value: string) => {
+    if (!primary) return;
+    try {
+      const runId = await startRun(agent.id, { [primary.name]: value });
+      saveLastAgent(agent.id);
+      navigate(`/runs/${runId}`, { viewTransition: true });
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  };
+
+  const sendFile = async (file: File) => {
+    setBusy(true);
+    setError(undefined);
+    setUploading({ name: file.name, fraction: 0 });
+    try {
+      const saved = await uploadFile(file, (fraction) => setUploading({ name: file.name, fraction }));
+      await go(saved.path);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    } finally {
+      setUploading(undefined);
+    }
+  };
+
+  const onDrop = (e: DragEvent) => {
+    if (primary?.kind !== "file") return;
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && !busy) void sendFile(file);
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (primary?.kind === "file") {
+      fileRef.current?.click();
+      return;
+    }
     if (!primary) {
       navigate(`/agents/${agent.id}`, { viewTransition: true });
       return;
@@ -83,19 +124,17 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
     }
     setBusy(true);
     setError(undefined);
-    try {
-      const runId = await startRun(agent.id, { [primary.name]: text.trim() });
-      saveLastAgent(agent.id);
-      navigate(`/runs/${runId}`, { viewTransition: true });
-    } catch (err) {
-      setError((err as Error).message);
-      setBusy(false);
-    }
+    await go(text.trim());
   };
 
   return (
     <div className={styles.wrap}>
-      <form className={styles.pill} onSubmit={submit}>
+      <form
+        className={styles.pill}
+        onSubmit={submit}
+        onDragOver={(e) => primary?.kind === "file" && e.preventDefault()}
+        onDrop={onDrop}
+      >
         <div className={styles.picker}>
           <button
             ref={pickerRef}
@@ -143,7 +182,39 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
           </div>
         </div>
         <span className={styles.divider} />
-        {primary ? (
+        {primary?.kind === "file" ? (
+          <>
+            <input
+              ref={fileRef}
+              type="file"
+              className="visually-hidden"
+              accept={primary.accept?.join(",")}
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void sendFile(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className={`${styles.input} ${styles.fileButton}`}
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+            >
+              {uploading ? (
+                <>
+                  Uploading {uploading.name} ({Math.round(uploading.fraction * 100)}%)
+                </>
+              ) : (
+                <>
+                  <Icon name="upload" size={20} /> Choose or drop a file
+                </>
+              )}
+            </button>
+          </>
+        ) : primary ? (
           <input
             ref={inputRef}
             className={styles.input}
@@ -173,7 +244,10 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
           onClick={() =>
             navigate(`/agents/${agent.id}`, {
               viewTransition: true,
-              state: primary && text.trim() ? { [primary.name]: text.trim() } : undefined,
+              state:
+                primary && primary.kind !== "file" && text.trim()
+                  ? { [primary.name]: text.trim() }
+                  : undefined,
             })
           }
         >

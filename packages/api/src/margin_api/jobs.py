@@ -17,7 +17,7 @@ import contextlib
 import time
 import uuid
 from collections import deque
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -109,9 +109,18 @@ class _Pool:
 
 
 class RunManager:
-    def __init__(self, registry: AgentRegistry, settings: ApiSettings) -> None:
+    def __init__(
+        self,
+        registry: AgentRegistry,
+        settings: ApiSettings,
+        *,
+        on_forget: Callable[[str], None] | None = None,
+        on_sweep: Callable[[], object] | None = None,
+    ) -> None:
         self.registry = registry
         self.settings = settings
+        self.on_forget = on_forget  # called with the id of each run that is forgotten
+        self.on_sweep = on_sweep  # called on every sweep, for other housekeeping
         self.runs: dict[str, Run] = {}
         self.pools = {
             "llm": _Pool(settings.llm_concurrency),  # runs on the local model (one GPU)
@@ -140,6 +149,7 @@ class RunManager:
         *,
         llm: LLMClient | None = None,
         provider: str | None = None,
+        run_id: str | None = None,
     ) -> Run:
         """Queue a run. ``llm`` is this run's model client (created from the current
         settings, so a change in settings applies to the next run); ``provider`` decides the
@@ -147,7 +157,7 @@ class RunManager:
         from margin_core import CancellationToken
 
         pool = "llm" if agent_cls.uses_llm and provider == "local" else "other"
-        run = Run(id=uuid.uuid4().hex, agent_id=agent_cls.id, pool=pool)
+        run = Run(id=run_id or uuid.uuid4().hex, agent_id=agent_cls.id, pool=pool)
         if agent_cls.uses_llm:
             run.llm, run.llm_provider = llm, provider
             run.llm_model = llm.model if llm is not None else None
@@ -310,7 +320,11 @@ class RunManager:
             key=lambda r: r.finished_monotonic or 0.0,
         )
         while len(self.runs) > self.settings.max_runs and finished:
-            self.runs.pop(finished.pop(0).id, None)
+            self._forget(finished.pop(0).id)
+
+    def _forget(self, run_id: str) -> None:
+        if self.runs.pop(run_id, None) is not None and self.on_forget is not None:
+            self.on_forget(run_id)
 
     def sweep(self) -> int:
         """Forget finished runs older than the TTL. Returns how many were removed."""
@@ -321,7 +335,9 @@ class RunManager:
             and now - r.finished_monotonic > self.settings.result_ttl_s
         ]  # fmt: skip
         for run_id in expired:
-            self.runs.pop(run_id, None)
+            self._forget(run_id)
+        if self.on_sweep is not None:
+            self.on_sweep()
         return len(expired)
 
     async def _sweep_forever(self) -> None:

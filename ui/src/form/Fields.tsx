@@ -1,5 +1,16 @@
-import { type KeyboardEvent, type ReactNode, useId, useState } from "react";
+import {
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { uploadFile } from "../api/client";
+import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
+import { fileSize } from "../lib/format";
 import styles from "./Fields.module.css";
 import type { Field, FormValue } from "./schema";
 
@@ -243,6 +254,169 @@ export function ListField({ field, value, error, onChange }: FieldProps) {
   );
 }
 
+function baseName(path: string): string {
+  return path.split(/[\\/]/).pop() || path;
+}
+
+type Upload =
+  | { state: "idle" }
+  | { state: "sending"; name: string; fraction: number }
+  | { state: "done"; name: string; size: number };
+
+/**
+ * A path the agent reads, filled by uploading a file (drop it, or choose it) to the API,
+ * which saves it and gives back the path. Typing a path on the API's machine still works.
+ */
+export function FileField({ field, value, error, onChange }: FieldProps) {
+  const id = useId();
+  const input = useRef<HTMLInputElement>(null);
+  const abort = useRef<AbortController | null>(null);
+  const [upload, setUpload] = useState<Upload>({ state: "idle" });
+  const [typing, setTyping] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [failed, setFailed] = useState<string>();
+  const path = String(value ?? "");
+
+  useEffect(() => () => abort.current?.abort(), []);
+
+  const send = async (file: File) => {
+    abort.current?.abort();
+    const controller = new AbortController();
+    abort.current = controller;
+    setFailed(undefined);
+    setUpload({ state: "sending", name: file.name, fraction: 0 });
+    onChange("");
+    try {
+      const saved = await uploadFile(
+        file,
+        (fraction) => setUpload({ state: "sending", name: file.name, fraction }),
+        controller.signal,
+      );
+      setUpload({ state: "done", name: saved.name, size: saved.size });
+      onChange(saved.path);
+    } catch (e) {
+      setUpload({ state: "idle" });
+      if (!(e instanceof DOMException && e.name === "AbortError"))
+        setFailed(e instanceof Error ? e.message : "The upload failed");
+    }
+  };
+
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) void send(file);
+  };
+
+  const clear = () => {
+    abort.current?.abort();
+    setUpload({ state: "idle" });
+    setFailed(undefined);
+    onChange("");
+  };
+
+  if (typing) {
+    return (
+      <div className={styles.group}>
+        <TextField
+          field={{ ...field, kind: "text", description: "A path on the machine running the API." }}
+          value={value}
+          error={error}
+          onChange={onChange}
+          autoFocus
+        />
+        <button type="button" className={styles.switchMode} onClick={() => setTyping(false)}>
+          Upload a file instead
+        </button>
+      </div>
+    );
+  }
+
+  const problem = error ?? failed;
+  const shown =
+    upload.state === "done" ? upload : path ? { name: baseName(path), size: undefined } : undefined;
+  return (
+    <div className={styles.group}>
+      <span className={styles.fileLabel} id={`${id}-label`}>
+        {field.label}
+        {field.required && <span aria-hidden="true"> *</span>}
+      </span>
+      <section
+        className={styles.drop}
+        data-dragging={dragging || undefined}
+        data-error={problem ? true : undefined}
+        aria-labelledby={`${id}-label`}
+        aria-describedby={`${id}-support`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+      >
+        <input
+          ref={input}
+          type="file"
+          className="visually-hidden"
+          accept={field.accept?.join(",")}
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void send(file);
+            e.target.value = "";
+          }}
+        />
+        {upload.state === "sending" ? (
+          <div className={styles.sending}>
+            <span className={styles.fileName}>
+              <Icon name="spinner" size={18} /> Uploading {upload.name}
+            </span>
+            <progress
+              className={styles.progress}
+              max={1}
+              value={upload.fraction}
+              aria-label={`Uploading ${upload.name}`}
+            />
+            <Button variant="text" size="s" onClick={clear}>
+              Cancel
+            </Button>
+          </div>
+        ) : shown ? (
+          <div className={styles.chosen}>
+            <Icon name="file" size={22} />
+            <span className={styles.fileName}>{shown.name}</span>
+            {shown.size !== undefined && <span className={styles.fileSize}>{fileSize(shown.size)}</span>}
+            <span className={styles.fileActions}>
+              <Button variant="text" size="s" onClick={() => input.current?.click()}>
+                Replace
+              </Button>
+              <Button variant="text" size="s" onClick={clear}>
+                Remove
+              </Button>
+            </span>
+          </div>
+        ) : (
+          <div className={styles.empty}>
+            <Icon name="upload" size={24} />
+            <span>Drop a file here, or</span>
+            <Button variant="tonal" size="s" onClick={() => input.current?.click()}>
+              Choose a file
+            </Button>
+          </div>
+        )}
+      </section>
+      <p id={`${id}-support`} className={styles.support} data-error={Boolean(problem)}>
+        {problem && <Icon name="error" size={16} />}
+        {problem ?? field.description}
+      </p>
+      <button type="button" className={styles.switchMode} onClick={() => setTyping(true)}>
+        Type a path on the server instead
+      </button>
+    </div>
+  );
+}
+
 export function FieldInput(props: FieldProps) {
   const { field } = props;
   switch (field.kind) {
@@ -256,6 +430,8 @@ export function FieldInput(props: FieldProps) {
       return <ListField {...props} />;
     case "json":
       return <JsonField {...props} />;
+    case "file":
+      return <FileField {...props} />;
     default:
       return <TextField {...props} />;
   }

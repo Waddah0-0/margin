@@ -64,6 +64,10 @@ Settings page shows only their last four characters). Keys saved from the UI go 
   visit from reaching it through DNS rebinding and reading your results.
 - Only the UI's own address may call it from a browser (CORS), and request bodies are
   limited in size.
+- Uploaded files are saved under a folder the API owns, with their names cleaned of folders
+  and special characters, and deleted after an hour. Uploads have their own size limit
+  (`MARGIN_API_MAX_UPLOAD_BYTES`, 200 MB).
+- A run's files can only be downloaded from that run's own folder, by plain file name.
 - The Docker container runs as an ordinary user, publishes its port on your computer only,
   and sees your files read-only.
 

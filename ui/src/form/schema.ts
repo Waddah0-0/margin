@@ -13,6 +13,7 @@ export type FieldKind =
   | "tristate" // true / false / null ("auto")
   | "choice" // enum of strings
   | "list" // array of strings
+  | "file" // a path the user can also fill by uploading a file ("format": "file-path")
   | "json"; // anything else, edited as JSON
 
 export interface Field {
@@ -33,6 +34,8 @@ export interface Field {
   minLength?: number;
   maxLength?: number;
   placeholder?: string;
+  /** For a file: the extensions to offer in the picker ("x-accept"). */
+  accept?: string[];
 }
 
 /** Form state: text-like fields hold strings while typing; the payload is typed. */
@@ -91,7 +94,7 @@ function fieldFor(name: string, raw: JsonSchema, root: JsonSchema): Omit<Field, 
   if (Array.isArray(node.enum) && node.enum.every((v) => typeof v === "string")) {
     kind = "choice";
     options = node.enum as string[];
-  } else if (type === "string") kind = "text";
+  } else if (type === "string") kind = node.format === "file-path" ? "file" : "text";
   else if (type === "integer") kind = "integer";
   else if (type === "number") kind = "number";
   else if (type === "boolean") kind = nullable ? "tristate" : "boolean";
@@ -116,6 +119,7 @@ function fieldFor(name: string, raw: JsonSchema, root: JsonSchema): Omit<Field, 
     minLength: num(node.minLength),
     maxLength: num(node.maxLength),
     placeholder: examples?.length ? String(examples[0]) : undefined,
+    accept: Array.isArray(node["x-accept"]) ? (node["x-accept"] as unknown[]).map(String) : undefined,
   };
 }
 
@@ -123,7 +127,11 @@ function fieldFor(name: string, raw: JsonSchema, root: JsonSchema): Omit<Field, 
 export function fieldsFromSchema(schema: JsonSchema, primaryInput?: string | null): Field[] {
   const properties = (schema.properties ?? {}) as Record<string, JsonSchema>;
   const required = new Set(Array.isArray(schema.required) ? (schema.required as string[]) : []);
-  const fields = Object.entries(properties).map(([name, prop]) => ({
+  // an output folder is the API's to fill (each run gets its own, with downloads)
+  const shown = Object.entries(properties).filter(
+    ([, prop]) => resolve(prop, schema).format !== "output-dir",
+  );
+  const fields = shown.map(([name, prop]) => ({
     ...fieldFor(name, prop, schema),
     required: required.has(name),
     primary: name === primaryInput,
