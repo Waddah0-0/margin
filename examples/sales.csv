@@ -1,0 +1,8 @@
+Monthly sales export,,,
+Order date,Region,Revenue,Customer email
+2026-01-05,North,"$1,200.50",a@example.com
+05/02/2026,north,"$980",b@example.com
+2026-03-07,South,"$1,450",c@example.com
+2026-03-07,South,"$1,450",c@example.com
+2026-04-11,South,n/a,d@example.com
+2026-05-19,North,"$2,100",e@example.com

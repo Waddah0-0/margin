@@ -1,39 +1,276 @@
-# margin
+<p align="center">
+  <img src="ui/public/mark.svg" width="72" alt="" />
+</p>
 
-margin is a collection of small AI agents that all work the same way. Each agent does
-one job, such as looking at a codebase and estimating how much of it was written with AI
-tools. Every agent takes typed input, returns the same kind of structured result, and runs
-on shared plumbing for loading code, calling a language model, and writing reports.
+<h1 align="center">margin</h1>
 
-The name comes from how the agents answer: never a bare verdict, always the evidence beside
-it, like notes written in the margin of your code.
+<p align="center"><b>AI agents that show their work.</b></p>
 
-The idea is that writing the tenth agent should be much cheaper than writing the first.
-The hard, boring parts are solved once in a shared core: cloning repositories safely,
-skipping lockfiles and minified bundles, retrying flaky model calls, keeping track of cost,
-and rendering results. An agent only has to contain the logic that makes it different.
+<p align="center">
+  <a href="https://pypi.org/project/margin-cli/"><img src="https://img.shields.io/pypi/v/margin-cli?label=pypi" alt="PyPI" /></a>
+  <a href="https://github.com/Waddah0-0/margin/actions/workflows/ci.yml"><img src="https://github.com/Waddah0-0/margin/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT licence" /></a>
+</p>
 
-The project is young but usable: the core, the first real agent, the command-line tool, the
-HTTP API and a web UI all work. The first PyPI release is next (see [Status](#status)).
+<p align="center">
+  <a href="#try-it">Try it</a> ·
+  <a href="#agents">Agents</a> ·
+  <a href="#ways-to-run-it">Ways to run it</a> ·
+  <a href="#models">Models</a> ·
+  <a href="#write-your-own-agent">Write your own</a>
+</p>
 
-## Why build it this way
+Most AI tools hand you a confident paragraph and hope for the best. margin's agents hand you
+the answer and the receipts: the line of code, the commit or the row of data behind it. Think
+of notes written in the margin of your work, which is where the name comes from.
 
-Most "AI agent" code ends up as a pile of one-off scripts. Each one parses its own input,
-prints free-form text, and talks to a model in its own slightly different way. That makes
-the scripts hard to reuse, hard to test, and impossible to put behind a single interface.
+Each agent does one job. They run on your own computer, with a local model or with no model at
+all, so there's no API key to find and no bill at the end of the month.
 
-margin makes three decisions to avoid that:
+## Try it
 
-1. **One contract for every agent.** An agent is a Python class with an input model, an
-   output model, and an async `run` method. Anything that can run one agent can run all of
-   them.
-2. **Structured results, never just text.** Every agent returns an `AgentResult`. It holds
-   a short summary, a list of findings, the evidence behind each finding, and the agent's
-   own typed data. Because the shape is always the same, one generic report or UI can
-   display any agent's output, and a conclusion is always backed by evidence you can check.
-3. **Agents are plugins.** Each agent is its own installable package. It announces itself
-   through a Python entry point, so installing it is enough for the CLI, the API and the
-   Python helpers to find it. Adding an agent never means editing the core.
+Here's a small, messy spreadsheet export. It has a title row where the headers should be, two
+date formats, a repeated row and a revenue cell that says `n/a`:
+
+```text
+Monthly sales export,,,
+Order date,Region,Revenue,Customer email
+2026-01-05,North,"$1,200.50",a@example.com
+05/02/2026,north,"$980",b@example.com
+2026-03-07,South,"$1,450",c@example.com
+2026-03-07,South,"$1,450",c@example.com
+2026-04-11,South,n/a,d@example.com
+2026-05-19,North,"$2,100",e@example.com
+```
+
+Give it to the Data Storyteller:
+
+```bash
+pip install margin-cli margin-data-storyteller
+curl -O https://raw.githubusercontent.com/Waddah0-0/margin/main/examples/sales.csv
+margin run data-storyteller sales.csv --set assume_defaults=true
+```
+
+It cleans the file and accounts for every change. Part of the report:
+
+```markdown
+Cleaned sales.csv: 5 rows and 4 columns. 5 changes, 1 row removed; every value is accounted
+for. 3 decisions were assumed, not confirmed.
+
+### Order date: read as dates
+
+Read 1 value as dates (month first).
+
+- **decision** `In "Order date", is 05/02/2026 day first or month first?` - Assumed, not confirmed: Month first
+- **change** `row 4` - 05/02/2026 → 2026-05-02
+
+### Revenue: values that mean empty
+
+Emptied 1 cell that means no value ("n/a" ×1).
+
+- **change** `row 7` - n/a → empty
+```
+
+Is 05/02/2026 in May or February? The file can't say. Leave out `assume_defaults` and margin
+asks you. Keep it, as above, and the guess is labelled as a guess.
+
+Add `--set stop_after=story` to a bigger file and it finds the story too. In the web UI every
+number is a button that opens the fact behind it:
+
+<p align="center">
+  <img src="docs/images/data-storyteller.png" width="800" alt="A Data Storyteller result: revenue rose 34.1%, with a monthly line chart and each number highlighted." />
+  <br />
+  <sub>600 rows of made-up sales data, with the story written from the built-in template and no model.</sub>
+</p>
+
+## Agents
+
+| Agent | What it does | State |
+|---|---|---|
+| [Data Storyteller](agents/data_storyteller/README.md) | Cleans a table of data, explains every change, and writes the story in it, every number checked. | Experimental |
+| [AI Code Detector](agents/ai_code_detector/README.md) | Estimates how likely a codebase was written with AI assistance, and shows the evidence. | Experimental |
+| [Echo](agents/echo/README.md) | Repeats what you tell it. It's here for testing, and for copying when you write your own. | Ready |
+
+Each one installs separately, and every margin tool finds whatever you've installed. Point the
+detector at a repository and it gives you a range, a confidence level and the files and lines
+that moved the number:
+
+```bash
+pip install margin-cli margin-ai-code-detector
+margin run ai-code-detector https://github.com/psf/requests
+```
+
+Its estimate is good for ranking, and it's no proof of anything, so please don't accuse anyone
+based on it. [How it scores](docs/methodology.md) has the measurements.
+
+## Why you can check its work
+
+- **Code computes the numbers.** A model never makes one up. The storyteller's writer can only
+  refer to facts by name, and each fact is computed twice, in pandas and in separate SQL. If
+  they disagree, the run fails. The detector's model points at line numbers, and margin copies
+  the quotes from the file.
+- **You make the judgement calls.** An agent can stop and ask instead of guessing. Every answer
+  stays in the result, marked with who gave it.
+- **Strange repositories stay inert.** They're read and never run, and git is locked down so a
+  repository can't make it start a program. [The security page](docs/security.md) lists each
+  protection and its limits.
+- **Your data stays on your computer** with the default local model. If you choose a hosted one,
+  the UI tells you. The storyteller never sends it a row of data.
+
+## Ways to run it
+
+**In the terminal**
+
+```bash
+margin list                  # what's installed
+margin info data-storyteller # what it takes as input
+margin run data-storyteller sales.csv --format json --out report.json
+```
+
+Reports go to stdout and everything else to stderr, so output is safe to pipe.
+[The CLI's README](packages/cli/README.md) has every option and exit code.
+
+**In the browser**
+
+```bash
+pip install margin-api
+margin-api                   # then open http://127.0.0.1:8000
+```
+
+You get a form for each agent, live progress and downloadable results. The same server is an
+HTTP API for your own programs, documented at `/docs` ([details](packages/api/README.md)).
+
+**With Docker**
+
+```bash
+docker compose up            # then open http://localhost:8000
+```
+
+This runs from a clone of this repository. The API and web UI share one container, which uses
+the Ollama already running on your computer.
+
+<details>
+<summary>Docker details</summary>
+
+The folder you start it from is shared read-only at `/workspace`, so to check a local project,
+point the detector at `/workspace/...`. Set `MARGIN_WORKSPACE` to share a different folder.
+GitHub URLs need nothing extra.
+
+Settings and keys live in a Docker volume and survive rebuilds. The container only listens on
+your computer and doesn't run as root. `compose.yaml` has the other options, including Ollama
+in Docker on Linux with an NVIDIA GPU.
+
+</details>
+
+**From Python**
+
+```python
+import asyncio
+from margin_core import run_agent
+
+
+async def main() -> None:
+    result = await run_agent("echo", {"message": "hello", "repeat": 2})
+    print(result.summary)  # Echoed 11 characters (2x).
+
+
+asyncio.run(main())
+```
+
+## Models
+
+By default, agents use [Ollama](https://ollama.com) on your computer with `qwen3.5:9b`, which
+fits on an 8 GB GPU. It beat the other small models we tried at judging code on the same files.
+
+```bash
+ollama pull qwen3.5:9b
+```
+
+Local models are slower and less sharp than the big hosted ones. If that matters for a run,
+pick Anthropic or OpenAI on the web UI's Settings page, or use `--provider` and `--model` on the
+command line. Prompts then go to that company. For the detector, that includes samples of the
+code it reads.
+
+<details>
+<summary>Other local servers, and settings</summary>
+
+Any server that speaks the OpenAI chat API works. Set `LOCAL_LLM_BASE_URL`:
+
+| Server | `LOCAL_LLM_BASE_URL` |
+|---|---|
+| Ollama (default) | `http://localhost:11434` |
+| LM Studio | `http://localhost:1234` |
+| llama.cpp `llama-server` | `http://localhost:8080` |
+| vLLM | `http://localhost:8000` |
+
+For long inputs, give Ollama a larger context window, for example `OLLAMA_CONTEXT_LENGTH=8192`.
+
+Change settings with environment variables, the web UI's Settings page, or a copy of
+`.env.example` named by `MARGIN_ENV_FILE`. A `.env` in the current folder is not read, because
+that folder may be a repository you're analysing.
+
+</details>
+
+## Write your own agent
+
+An agent is a class with an input, an output and a `run` method. This one counts TODOs and says
+where it found them:
+
+```python
+from margin_core import AgentInput, AgentResult, BaseAgent, Evidence, Finding, RunContext
+from pydantic import BaseModel
+
+
+class TodoInput(AgentInput):
+    text: str
+
+
+class TodoOutput(BaseModel):
+    todos: int
+
+
+class TodoCounter(BaseAgent):
+    id = "todo-counter"
+    name = "TODO Counter"
+    description = "Counts the TODOs in a piece of text."
+    version = "0.1.0"
+    InputModel = TodoInput
+    OutputModel = TodoOutput
+
+    async def run(self, input: TodoInput, ctx: RunContext) -> AgentResult:
+        lines = enumerate(input.text.splitlines(), start=1)
+        hits = [(number, line) for number, line in lines if "TODO" in line]
+        return self.make_result(
+            summary=f"Found {len(hits)} TODOs.",
+            output=TodoOutput(todos=len(hits)),
+            findings=[
+                Finding(
+                    title="TODOs",
+                    summary="Lines that still have work to do.",
+                    evidence=[
+                        Evidence(kind="line", location=str(number), detail=line)
+                        for number, line in hits
+                    ],
+                )
+            ],
+        )
+```
+
+Once it's registered, the CLI, the API and the web UI all pick it up, and the form comes from
+the input model. You don't edit anything else. Loading repositories, retrying model calls,
+tracking cost and writing reports are already handled by the core.
+
+To start a real one inside this repository:
+
+```bash
+uv run python scripts/new_agent.py todo-counter --name "TODO Counter" \
+    --description "Counts the TODOs in a piece of text."
+uv sync --all-packages
+```
+
+[Writing an agent](docs/writing-an-agent.md) walks through the rest, and
+`examples/custom_agent.py` is a complete script you can run.
 
 ## How it fits together
 
@@ -53,240 +290,54 @@ margin makes three decisions to avoid that:
                        mock)
 ```
 
-The repository is a single [uv](https://github.com/astral-sh/uv) workspace. Each package
-inside it can be versioned and published on its own:
+<details>
+<summary>What's in this repository</summary>
 
 | Path | What it is |
 |---|---|
-| `packages/core` | The shared foundation: the agent contract, result models, registry, loaders, LLM clients and reporting. |
-| `packages/cli` | The `agents` command-line tool. |
-| `packages/api` | The HTTP server: run agents in the background, follow them live, cancel them ([details](packages/api/README.md)). |
-| `agents/echo` | A minimal reference agent, used for smoke tests and as a template. |
-| `agents/ai_code_detector` | The first real agent: estimates how much of a codebase was written with AI tools. |
-| `ui/` | The web UI, a client of the HTTP API ([details](ui/README.md)). |
-| `examples/` | Small runnable scripts. |
-| `scripts/` | Workspace tools: create an agent, check agent folders, mirror agents, type-check. |
-| `tests/` | Tests for the workspace tools. |
-| `docs/` | [Writing an agent](docs/writing-an-agent.md), [how the AI Code Detector scores code](docs/methodology.md), [security](docs/security.md) and [releasing](docs/releasing.md). |
+| [`packages/core`](packages/core/README.md) | The agent contract, result models, registry, loaders, LLM clients and reports. |
+| [`packages/cli`](packages/cli/README.md) | The `margin` command. |
+| [`packages/api`](packages/api/README.md) | The HTTP server: background runs, live progress, questions, uploads. |
+| [`ui/`](ui/README.md) | The web UI, a client of the API ([design rules](ui/DESIGN.md)). |
+| `agents/` | One folder per agent, each a self-contained package. |
+| `examples/` | A runnable script and the sample file above. |
+| `scripts/` | Workspace tools: create and check agents, mirror them, type-check, build a release. |
+| `docs/` | [Writing an agent](docs/writing-an-agent.md), [methodology](docs/methodology.md), [security](docs/security.md) and [releasing](docs/releasing.md). |
 
-### The core, piece by piece
+</details>
 
-**The agent contract.** An agent subclasses `BaseAgent`, declares its `InputModel` and
-`OutputModel` (Pydantic models), and implements `async def run(input, ctx)`. Callers use
-`execute()`, which validates the input, times the run, records model usage, and turns any
-crash into an error result. A caller always gets a structured answer back, even when the
-agent fails.
+## Development
 
-**The run context.** Every run receives a `RunContext`. It gives the agent the LLM client,
-a progress callback (the CLI can show it as a progress bar, and the API can stream it to a
-browser), a cancellation flag, and a logger. It also lets an agent stop and ask the person
-running it a question instead of guessing. The CLI asks in the terminal, and the web UI
-shows a form on the run page. Every answer is kept in the result, marked with who gave it.
-
-**Loaders.** Agents that work on code never deal with where it came from. A loader turns a
-GitHub URL or a local path into a `Workspace`: the files worth analysing, the files that
-were skipped and why, and access to the git history. The GitHub loader is deliberately
-careful:
-
-- it only accepts `https://github.com/<owner>/<repo>`;
-- it skips submodules and treats symlinks as plain files;
-- it never prompts for credentials, and enforces size and time limits;
-- it never executes anything from the repository.
-
-Filters drop lockfiles, dependency folders, build output, minified bundles, binaries and
-generated code before an agent ever sees them.
-
-**LLM clients.** All model access goes through one `LLMClient` interface with two calls:
-`complete()` for text and `complete_structured()` for replies that must match a Pydantic
-schema. Retries, timeouts, token counting, cost estimates and a hard spending cap are
-handled for every provider. A `MockLLM` returns scripted answers, so the test suite never
-touches the network.
-
-**Reporting.** Any result can be rendered as JSON or as a readable Markdown report.
-
-## Local models by default
-
-Agents run against a model on your own machine unless you say otherwise, so using them
-costs nothing. The default is [Ollama](https://ollama.com) with `qwen3.5:9b`, which runs
-on an 8 GB GPU and was chosen by measurement: it judged code clearly better than
-`qwen2.5:7b`, `qwen2.5-coder:7b` and `gemma4:e4b` in a head-to-head on the same files. It
-is a "thinking" model; margin turns its hidden reasoning off, because otherwise it can
-spend its whole answer on reasoning. Any server that speaks the OpenAI chat API works:
-
-| Server | `LOCAL_LLM_BASE_URL` |
-|---|---|
-| Ollama (default) | `http://localhost:11434` |
-| LM Studio | `http://localhost:1234` |
-| llama.cpp `llama-server` | `http://localhost:8080` |
-| vLLM | `http://localhost:8000` |
-
-When an agent asks for structured output, the schema is passed to the server so the model
-is forced to produce valid JSON. Small local models need this to be reliable.
-
-Local models have limits you should know about. They are slower, especially on the first
-call while the model loads. They have smaller context windows; for long inputs, start Ollama
-with a larger one, for example `OLLAMA_CONTEXT_LENGTH=8192`. And their judgment is weaker
-than that of the large hosted models. Anthropic and OpenAI remain available for when that
-matters: pick them on the web UI's Settings page (keys stay on your computer), or set
-`DEFAULT_LLM_PROVIDER` to `anthropic` or `openai` with the matching API key. A single run can
-use a different model too: choose it on the run's form, or pass `--provider` and `--model` to
-`margin run`. With a hosted provider, agents send their prompts to that company; for the AI Code
-Detector that includes samples of the code it reads.
-
-## Agents
-
-Click an agent's name for what it does, how to use it, and its limits.
-
-| Agent | What it does | State |
-|---|---|---|
-| [AI Code Detector](agents/ai_code_detector/README.md) | Estimates how likely a codebase was written with AI assistance, and shows the evidence. | Experimental |
-| [Echo](agents/echo/README.md) | Echoes its input back. A reference agent for testing and for copying when you write a new one. | Ready |
-| [Data Storyteller](agents/data_storyteller/README.md) | Cleans a table of data, explains every change, and writes the story in it, every number checked. | Experimental |
-
-## Status
-
-The project is built in phases, each one usable before the next begins.
-
-| Phase | Scope | State |
-|---|---|---|
-| 0 | Repository skeleton, tooling, CI | Done |
-| 1 | Core: contract, models, registry, loaders, LLM clients, reporting | Done |
-| 1.5 | Core fixes (per-run LLM budgets, git history scoped to the target, safer clones) and the agent sub-repo standard | Done |
-| 2 | Command-line tool (`margin list`, `margin info`, `margin run`) | Done |
-| 3 | AI Code Detector with heuristic signals, plus the evaluation harness that measures it | Done |
-| 4 | LLM judge, larger evaluation dataset, fitted scoring | Done |
-| 5 | HTTP API with background runs and live progress | Done |
-| 6 | Web UI for every agent: schema-generated forms, live runs, results with evidence | Done |
-| 7 | A custom result view for the AI Code Detector: evidence side by side, marked code, history | Done |
-| 8 | Hardening and the first PyPI release | Done |
-
-## Getting started
-
-You need Python 3.11 or newer, [uv](https://github.com/astral-sh/uv), and git. To use a
-local model you also need Ollama or another server from the table above.
+You need Python 3.11 or newer, [uv](https://github.com/astral-sh/uv) and git, plus Node 20 or
+newer for the web UI.
 
 ```bash
 git clone https://github.com/Waddah0-0/margin.git
 cd margin
 uv sync --all-packages
-cp .env.example .env        # optional; the defaults work with a local Ollama
-ollama pull qwen3.5:9b      # only needed for agents that call a model
+uv run margin list
 ```
 
-Every installed agent can be run from the `agents` command:
+To work on the UI, start the API so it accepts the dev server, then start that:
 
 ```bash
-uv run margin list                       # installed agents
-uv run margin info echo                  # what an agent takes as input
-uv run margin run echo hello --set repeat=2
-uv run margin run echo hello --format json --out report.json
-```
-
-The positional value fills the agent's main input field; `--set field=value` fills any other
-field, and `--input file.json` reads them from a file. Reports go to stdout (or `--out`), and
-progress and warnings go to stderr, so JSON output can be piped safely. See
-[the CLI's README](packages/cli/README.md) for every option and exit code.
-
-Or over HTTP, for another program:
-
-```bash
-uv run margin-api            # then open http://127.0.0.1:8000/docs
-```
-
-Or in the browser. With the API running, start the web UI (Node 20 or newer):
-
-```bash
+MARGIN_API_CORS_ORIGINS='["http://localhost:3000"]' uv run margin-api
 cd ui && npm install && npm run dev    # http://localhost:3000
 ```
 
-Pick an agent, give it a folder or a GitHub URL, and watch it work. Every result can be
-exported as JSON or Markdown. [ui/README.md](ui/README.md) has the details, and
-[ui/DESIGN.md](ui/DESIGN.md) explains the design.
-
-### From PyPI
-
-Without cloning anything, with Python 3.11 or newer:
+Run these before you commit. CI runs the same ones.
 
 ```bash
-pip install margin-cli margin-ai-code-detector    # the command line, and the detector
-margin run ai-code-detector https://github.com/psf/requests
+uv run ruff check .
+uv run ruff format --check .
+uv run python scripts/typecheck.py
+uv run python -m pytest              # no network needed
 
-pip install margin-data-storyteller               # the Data Storyteller
-margin run data-storyteller sales.csv --set stop_after=story
-
-pip install margin-api                            # the web UI and HTTP API
-margin-api                                        # then open http://127.0.0.1:8000
+cd ui && npx biome check . && npm run typecheck && npm test
 ```
 
-Each agent is its own package; install the ones you want and every margin tool finds them.
-
-### With Docker
-
-```bash
-docker compose up            # then open http://localhost:8000
-```
-
-One container runs the API and the web UI together. The model isn't inside it: by default it
-uses the Ollama already running on your computer, which keeps your GPU and the models you've
-downloaded. You can switch to another server, or to Anthropic or OpenAI, on the Settings page.
-
-The folder you start it from is shared with the container, read-only, at `/workspace`, so to
-check a local project you point the detector at `/workspace/...` (set `MARGIN_WORKSPACE` to
-share a different folder). GitHub URLs need nothing extra. Your settings and keys live in a
-Docker volume and survive rebuilds. The container only listens on this computer and doesn't
-run as root. `compose.yaml` has the other options, including running Ollama in Docker on
-Linux with an NVIDIA GPU.
-
-The same agents can be used from Python:
-
-```python
-import asyncio
-from margin_core import run_agent
-
-
-async def main() -> None:
-    result = await run_agent("echo", {"message": "hello", "repeat": 2})
-    print(result.summary)  # Echoed 11 characters (2x).
-    print(result.data)  # {'echoed': 'hello hello', 'length': 11, 'llm_reply': None}
-
-
-asyncio.run(main())
-```
-
-For a complete example (a custom agent with progress reporting and a Markdown report),
-run `uv run python examples/custom_agent.py`.
-
-## Writing your own agent
-
-An agent is a folder under `agents/` with its own `pyproject.toml`, a class that
-subclasses `BaseAgent`, an entry point that registers it, and tests that use `MockLLM`.
-It may import only from `margin_core`, never from another agent. If a new agent seems to
-need a change to the core, that change should be general enough to help every agent.
-
-[docs/writing-an-agent.md](docs/writing-an-agent.md) walks through it step by step.
-
-## Development
-
-Run these before you commit. CI runs the same checks on Python 3.11 and 3.12, and the UI
-checks on Node 22.
-
-```bash
-uv run ruff check .          # lint
-uv run ruff format --check . # formatting
-uv run python scripts/typecheck.py  # strict type checking, per package
-uv run pytest                # tests; no network access needed
-```
-
-For the web UI, from `ui/`:
-
-```bash
-npx biome check .            # lint and formatting
-npm run typecheck
-npm test
-```
-
-Commits follow the [Conventional Commits](https://www.conventionalcommits.org) style
-(`feat:`, `fix:`, `docs:` and so on). Secrets belong in `.env`, which is never committed.
+Found a bug? [Open an issue](https://github.com/Waddah0-0/margin/issues). For anything that
+could put users at risk, please use GitHub's private vulnerability reporting.
 
 ## License
 
