@@ -21,12 +21,18 @@ from margin_core import (
 from margin_core.config import Settings
 from margin_core.errors import LLMError
 from margin_core.llm import LLMClient, create_llm
+from margin_core.reporting import strip_control
 from pydantic import BaseModel
 from rich.console import Console
-from rich.markup import escape
+from rich.markup import escape as escape_markup
 
 CANCEL_GRACE_S = 5.0
 """How long a cancelled agent gets to stop on its own before its task is cancelled."""
+
+
+def escape(text: str) -> str:
+    """Text from a run, safe to print: agents quote file names, commit messages and cells."""
+    return escape_markup(strip_control(text))
 
 
 class ExplicitLLMError(Exception):
@@ -98,7 +104,7 @@ class ProgressDisplay:
     def update(self, event: ProgressEvent) -> None:
         text = f"{self._agent_name}: {event.stage}"
         if event.message:
-            text += f" - {event.message}"
+            text += f" - {escape(event.message)}"
         if event.fraction is not None:
             text += f" ({event.fraction:.0%})"
         if self._status is not None:

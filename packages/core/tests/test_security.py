@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import shutil
@@ -21,8 +22,10 @@ import pytest
 from margin_core.errors import InvalidTargetError
 from margin_core.loaders import load_workspace
 from margin_core.loaders.base import Workspace
-from margin_core.loaders.git import SAFE_GIT_CONFIG, git_command, run_git
+from margin_core.loaders.git import SAFE_GIT_CONFIG, GitCommandError, git_command, run_git
 from margin_core.loaders.github import GitHubLoader
+from margin_core.models import AgentResult, Evidence, Finding
+from margin_core.reporting import to_json, to_markdown
 
 needs_git = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 
@@ -68,12 +71,127 @@ async def test_a_repository_cannot_make_git_run_its_programs(tmp_path: Path) -> 
     assert not marker.exists(), "margin let the repository run a program"
 
 
+def _program(path: Path, marker: Path) -> str:
+    """A script for settings git runs directly, without a shell: leaves ``marker`` behind."""
+    path.write_text(f'#!/bin/sh\necho ran > "{marker.as_posix()}"\nexit 1\n', newline="\n")
+    path.chmod(0o755)
+    return path.as_posix()
+
+
+def _commit_object(repo: Path, body: str) -> None:
+    """Point HEAD at a hand-written commit (``body`` is everything after the parent line)."""
+    parent = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    who = "t <t@example.com> 1700000000 +0000"
+    sha = subprocess.run(
+        ["git", "hash-object", "-t", "commit", "-w", "--stdin", "--literally"],
+        cwd=repo, check=True, capture_output=True,
+        input=body.format(parent=parent, who=who).encode(),
+    ).stdout.decode().strip()  # fmt: skip
+    _git(repo, "update-ref", "HEAD", sha)
+
+
+def _hostile_repo(root: Path) -> Path:
+    root.mkdir()
+    _git(root, "init", "-q")
+    (root / "app.py").write_text("x = 1\n", encoding="utf-8")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "init")
+    return root
+
+
+async def _read_history(repo: Path) -> None:
+    """All a run does with a folder's history; a failure is fine, a program running is not."""
+    try:
+        async with await load_workspace(str(repo)) as ws:
+            assert ws.git is not None
+            await ws.git.commits(max_count=10)
+            await ws.git.changed_files(max_count=10)
+    except GitCommandError:
+        pass
+
+
+@needs_git
+async def test_a_signed_commit_cannot_make_git_log_run_a_program(tmp_path: Path) -> None:
+    repo, marker = _hostile_repo(tmp_path / "hostile"), tmp_path / "gpg-ran"
+    _commit_object(
+        repo,
+        f"tree {_tree(repo)}\nparent {{parent}}\nauthor {{who}}\ncommitter {{who}}\n"
+        "gpgsig -----BEGIN PGP SIGNATURE-----\n \n abc\n -----END PGP SIGNATURE-----\n\n"
+        "signed\n",
+    )
+    _git(repo, "config", "log.showSignature", "true")
+    _git(repo, "config", "gpg.program", _program(tmp_path / "gpg.sh", marker))
+
+    # sanity: plain git runs it
+    subprocess.run(["git", "log", "--format=%H"], cwd=repo, capture_output=True, check=False)  # noqa: ASYNC221
+    if not marker.exists():
+        pytest.skip("this git does not run gpg.program here; nothing to prove")
+    marker.unlink()
+
+    await _read_history(repo)
+    assert not marker.exists(), "margin let the repository run a program"
+
+
+@needs_git
+@pytest.mark.parametrize(
+    "url", ["ssh://example.invalid/x.git", "{local}"], ids=["core.sshCommand", "uploadpack"]
+)
+async def test_a_missing_object_cannot_make_git_fetch_and_run_a_program(
+    tmp_path: Path, url: str
+) -> None:
+    repo, marker = _hostile_repo(tmp_path / "hostile"), tmp_path / "fetch-ran"
+    program = _program(tmp_path / "fetch.sh", marker)
+    _git(repo, "config", "extensions.partialClone", "origin")
+    _git(repo, "config", "remote.origin.promisor", "true")
+    _git(repo, "config", "remote.origin.url", url.format(local=repo.as_posix()))
+    _git(repo, "config", "core.sshCommand", program)
+    _git(repo, "config", "remote.origin.uploadpack", program)
+    # a commit whose tree is not there: reading it asks the "promisor" remote for it
+    _commit_object(
+        repo,
+        f"tree {'1' * 40}\nparent {{parent}}\nauthor {{who}}\ncommitter {{who}}\n\nmissing\n",
+    )
+
+    # sanity: plain git runs it
+    subprocess.run(  # noqa: ASYNC221
+        ["git", "log", "--name-only", "--format=%H"], cwd=repo, capture_output=True, check=False
+    )
+    if not marker.exists():
+        pytest.skip("this git does not fetch that way here; nothing to prove")
+    marker.unlink()
+
+    await _read_history(repo)
+    assert not marker.exists(), "margin let the repository run a program"
+
+
+def _tree(repo: Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD^{tree}"], cwd=repo, check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
 def test_every_git_command_carries_the_safety_settings() -> None:
     cmd = git_command(["log"])
     for setting in SAFE_GIT_CONFIG:
         assert cmd[cmd.index(setting) - 1] == "-c"
     assert "core.fsmonitor=false" in cmd and "filter.lfs.smudge=" in cmd
+    assert "log.showSignature=false" in cmd
     assert cmd[-1] == "log"
+
+
+def test_reports_carry_no_terminal_escape_sequences() -> None:
+    hostile = "\x1b]0;title\x07\x1b[2Jhidden\x9b31m"
+    result = AgentResult(
+        agent_id="x", agent_version="1", status="ok", summary=hostile,
+        findings=[Finding(title=hostile, summary=hostile,
+                          evidence=[Evidence(kind="commit", detail=hostile)])],
+    )  # fmt: skip
+    for report in (to_markdown(result), to_json(result)):
+        assert "\x1b" not in report and "\x07" not in report and "\x9b" not in report
+    assert "hidden" in to_markdown(result)
+    assert json.loads(to_json(result))["summary"] == hostile  # JSON keeps the value, escaped
 
 
 # ---- 2. reading outside the workspace ------------------------------------------------------

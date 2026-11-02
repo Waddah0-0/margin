@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
-  // 3000 is the origin the API allows by default (MARGIN_API_CORS_ORIGINS)
+  // the API must be told to allow this origin (MARGIN_API_CORS_ORIGINS, see README)
   server: { port: 3000, strictPort: true },
   preview: { port: 3000, strictPort: true },
   test: { environment: "jsdom", setupFiles: ["src/test/setup.ts"] },

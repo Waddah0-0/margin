@@ -4,6 +4,20 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [0.1.3] - 2026-11-02
+
+### Security
+- A folder being analysed could still make git run a program named in its `.git/config`, through
+  a signed commit (`log.showSignature` with `gpg.program`) or a missing object that made git
+  fetch (`core.sshCommand`, `remote.<name>.uploadpack`). Both are closed: signatures aren't
+  checked, and reading history never uses the network.
+- A `.env` in the current folder was read automatically, so a repository could change margin's
+  settings, for example to send its code to another server. Now only a file named by
+  `MARGIN_ENV_FILE` is read. **If you keep settings in `.env`, set `MARGIN_ENV_FILE=.env`.**
+- Reports no longer carry control characters, which could rewrite what a terminal shows.
+
 ## [0.1.2] - 2026-10-29
 
 ### Added

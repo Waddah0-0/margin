@@ -3,8 +3,12 @@
 1. environment variables (for deployments and CI);
 2. settings saved by the user, e.g. from the web UI, in ``settings.json`` in the user's
    config folder (``MARGIN_CONFIG_FILE`` overrides the path; empty turns it off);
-3. the ``.env`` file (``MARGIN_ENV_FILE`` chooses it; empty reads no file);
+3. the file named by ``MARGIN_ENV_FILE``, if any;
 4. the defaults below.
+
+No file is read unless ``MARGIN_ENV_FILE`` names one. A ``.env`` in the current folder is not
+trusted: that folder may be a repository being analysed, and its settings could send the code
+to another server.
 
 Empty values are ignored, so ``ANTHROPIC_API_KEY=`` in a ``.env`` does not count as a key.
 Secrets never have defaults, and saved secrets are never sent back to a browser.
@@ -31,7 +35,7 @@ from pydantic_settings import (
 ENV_FILE_VAR = "MARGIN_ENV_FILE"
 CONFIG_FILE_VAR = "MARGIN_CONFIG_FILE"
 
-# What the user may save (the rest is configured by environment or .env only).
+# What the user may save (the rest is configured by environment or env file only).
 SAVEABLE = frozenset({
     "default_llm_provider",
     "local_llm_base_url", "local_llm_api_key", "local_llm_model",
@@ -116,7 +120,7 @@ class Settings(BaseSettings):
     """Global settings for margin."""
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore", env_ignore_empty=True
+        env_file_encoding="utf-8", extra="ignore", env_ignore_empty=True
     )
 
     anthropic_api_key: SecretStr | None = None
@@ -156,7 +160,7 @@ class Settings(BaseSettings):
 
 
 def _env_file() -> str | None:
-    return os.environ.get(ENV_FILE_VAR, ".env") or None
+    return os.environ.get(ENV_FILE_VAR) or None
 
 
 def get_settings() -> Settings:

@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-02
+
 ### Added
 - Uploads: `POST /uploads?name=<file>` saves the request body as a file and returns its path,
   for an agent's input. Uploads have their own size limit, `MARGIN_API_MAX_UPLOAD_BYTES`
@@ -18,6 +20,17 @@ All notable changes to this package are documented here. The format follows
 - The web UI uploads a file for an input field marked `"format": "file-path"` (drop it or
   choose it, on the agent page and in the home page launcher), and offers a run's files for
   download next to the JSON and Markdown exports.
+
+### Security
+- Requests that change something are refused with 403 if they come from another web page. CORS
+  only hid the answer, so any site you visited could upload files. Requires FastAPI 0.132 or
+  later, which also stops a page from starting a run with a JSON body and no `Content-Type`.
+- `MARGIN_API_CORS_ORIGINS` is now empty by default. The UI the API serves itself is unaffected;
+  to use the UI's dev server, add `http://localhost:3000` (see `ui/README.md`).
+- An output folder can no longer be chosen over HTTP (422), so a caller can't write files
+  elsewhere on the machine. Each run writes to its own folder.
+- A `.env` in the current folder is no longer read, because it could open the server to the
+  network. Name a file with `MARGIN_ENV_FILE`.
 
 ## [0.1.1] - 2026-10-29
 

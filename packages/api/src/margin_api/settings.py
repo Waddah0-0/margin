@@ -1,4 +1,4 @@
-"""API server settings, from ``MARGIN_API_*`` environment variables (and ``.env``)."""
+"""API server settings, from ``MARGIN_API_*`` environment variables (and ``MARGIN_ENV_FILE``)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,9 @@ class ApiSettings(BaseSettings):
 
     host: str = "127.0.0.1"  # not exposed on the network unless you choose to
     port: int = 8000
-    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # Other web pages allowed to call the API. The UI it serves itself needs none; the UI's dev
+    # server does (see ui/README.md).
+    cors_origins: list[str] = []
     # Host names the API answers to (protects against DNS rebinding). Add yours if you
     # change ``host`` to expose the API on a network.
     allowed_hosts: list[str] = ["127.0.0.1", "localhost"]
@@ -32,5 +34,5 @@ class ApiSettings(BaseSettings):
 
 
 def load_settings() -> ApiSettings:
-    env_file = os.environ.get("MARGIN_ENV_FILE", ".env")
-    return ApiSettings(_env_file=env_file or None)  # type: ignore[call-arg]
+    # never a .env in the current folder: it could open the server to the network
+    return ApiSettings(_env_file=os.environ.get("MARGIN_ENV_FILE") or None)  # type: ignore[call-arg]

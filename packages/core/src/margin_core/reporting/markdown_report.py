@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from margin_core.models import AgentResult, Evidence
 
 _STATUS_LABEL = {"ok": "ok", "partial": "partial", "error": "error"}
 _ANSWERED_BY = {"user": "you", "preset": "the run's input", "default": "default, not confirmed"}
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")  # all but tab and newline
+
+
+def strip_control(text: str) -> str:
+    """Remove control characters. Reports quote commit messages, file names and cells, and in
+    a terminal an escape sequence among them could rewrite what the reader sees."""
+    return _CONTROL.sub("", text)
 
 
 def _cell(text: object) -> str:
@@ -83,7 +91,7 @@ def to_markdown(result: AgentResult) -> str:
         md += [f"| {_cell(k)} | {_cell(v)} |" for k, v in rows]
         md.append("")
 
-    return "\n".join(md).rstrip() + "\n"
+    return strip_control("\n".join(md)).rstrip() + "\n"
 
 
 def write_markdown(result: AgentResult, path: str | Path) -> Path:

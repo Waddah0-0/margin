@@ -28,6 +28,10 @@ a fourth new package, publish the first three, then add the fourth and re-run it
 real one. A new agent needs its own entry, and its own line in the publish matrix of
 `release.yml` (the release check fails until it has one).
 
+On GitHub, each `pypi-` environment only accepts runs from a `v*` tag and needs the owner's
+approval (**Settings → Environments**). A new agent's environment needs the same two rules, or
+anyone who can run the workflow could publish it.
+
 ## Each release
 
 1. Bump the `version` of each package that changed, and move its `CHANGELOG.md` entry from
@@ -50,8 +54,10 @@ real one. A new agent needs its own entry, and its own line in the publish matri
    git tag v0.1.0 && git push origin v0.1.0
    ```
 
-   The workflow builds, checks and publishes. Versions already on PyPI are skipped, so a tag
-   only publishes the packages whose version changed.
+   The workflow builds and checks, then waits. Open the run under **Actions** and approve each
+   package's publish job; they run one at a time, so each waits for the one before it. Every
+   package needs approving even if its version didn't change: versions already on PyPI are
+   skipped, so a tag only publishes the packages whose version changed.
 
 A version on PyPI can never be replaced, only yanked (hidden from new installs). If something
 is wrong, fix it and publish the next version.

@@ -33,15 +33,23 @@ def git_available() -> bool:
 # Passed on every git command line, where they override any config, including a repository's
 # own .git/config. A folder we are pointed at is untrusted: its config could name programs for
 # git to run (core.fsmonitor), hooks could run on checkout, and Git LFS could download files
-# from another server past our size limits.
+# from another server past our size limits. log.showSignature would make ``git log`` run the
+# program named by gpg.program on any signed commit.
 SAFE_GIT_CONFIG = (
     "core.fsmonitor=false",
     "core.hooksPath=" + os.devnull,
     "filter.lfs.smudge=",
     "filter.lfs.process=",
     "filter.lfs.required=false",
+    "log.showSignature=false",
     "i18n.logOutputEncoding=UTF-8",
 )
+
+# Added when reading history, which never needs the network. A repository that declares a
+# "promisor" remote and leaves out an object makes git fetch it, and a fetch runs programs the
+# repository names (core.sshCommand, remote.<name>.uploadpack). A clone does fetch, so it goes
+# without these.
+READ_ONLY_GIT_CONFIG = ("protocol.allow=never",)
 
 
 def safe_git_env() -> dict[str, str]:
@@ -69,14 +77,16 @@ def git_command(args: list[str]) -> list[str]:
 
 
 def run_git(args: list[str], cwd: Path | None = None, timeout_s: float = 60.0) -> str:
-    """Run ``git <args>`` and return stdout (UTF-8). Raises :class:`GitCommandError`."""
-    cmd = git_command(args)
+    """Run a command that only reads the repository, with no network, and return stdout (UTF-8).
+    Raises :class:`GitCommandError`."""
+    read_only = [arg for setting in READ_ONLY_GIT_CONFIG for arg in ("-c", setting)]
+    cmd = git_command([*read_only, *args])
     proc = subprocess.run(
         cmd,
         cwd=cwd,
         capture_output=True,
         timeout=timeout_s,
-        env=safe_git_env(),
+        env={**safe_git_env(), "GIT_NO_LAZY_FETCH": "1"},  # git 2.45+; older ones have the config
         stdin=subprocess.DEVNULL,
         check=False,
     )

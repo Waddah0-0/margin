@@ -50,7 +50,7 @@ Giving the main field both ways, positionally and with `--set`, is an error.
 | `--strict` | Treat a partial result as a failure (exit code 4). |
 
 The model comes from your settings (environment variables, settings saved in the web UI, or
-`.env`), but nothing talks to a model unless the agent needs one. Agents that don't use a
+the file named by `MARGIN_ENV_FILE`), but nothing talks to a model unless the agent needs one. Agents that don't use a
 model work even with no model server running. If you pass `--provider` or `--model`, that
 choice is checked before the run starts.
 

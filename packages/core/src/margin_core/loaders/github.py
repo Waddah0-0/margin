@@ -72,7 +72,7 @@ class GitHubLoader(Loader):
         self.allow_non_github_urls = allow_non_github_urls  # tests only (file:// fixtures)
         self.api_base = api_base.rstrip("/")
         if github_token is None:
-            secret = get_settings().github_token  # GITHUB_TOKEN env var or .env
+            secret = get_settings().github_token  # GITHUB_TOKEN env var or MARGIN_ENV_FILE
             github_token = secret.get_secret_value() if secret else None
         self.github_token = github_token or None
         self._http_client = http_client

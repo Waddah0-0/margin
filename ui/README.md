@@ -12,15 +12,16 @@ It is designed as a lab notebook: warm paper, ink, and a highlighter that marks 
 You need Node 20 or newer, and the API running:
 
 ```bash
-uv run margin-api            # from the repository root: http://127.0.0.1:8000
+# from the repository root: http://127.0.0.1:8000
+MARGIN_API_CORS_ORIGINS='["http://localhost:3000"]' uv run margin-api
 
 cd ui
 npm install
 npm run dev                  # http://localhost:3000
 ```
 
-The API only accepts browser requests from `localhost:3000` and `127.0.0.1:3000` by default
-(`MARGIN_API_CORS_ORIGINS`). To point the UI at another API address, set `VITE_API_URL`:
+The API refuses other web pages by default, so the dev server has to be named in
+`MARGIN_API_CORS_ORIGINS`. To point the UI at another API address, set `VITE_API_URL`:
 
 ```bash
 VITE_API_URL=http://127.0.0.1:9000 npm run dev

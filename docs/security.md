@@ -10,9 +10,13 @@ Each protection has a test that tries to break it, mostly in
 Repositories are only ever read, never run. That covers more than "we don't execute the
 code": a repository can also try to make git run programs for it.
 
-- Every git command margin runs overrides the repository's own config, so a `.git/config`
-  that names a program (through `core.fsmonitor`, for example) is ignored. Hooks are turned
-  off and Git LFS downloads are skipped.
+- Every git command margin runs overrides the settings in the repository's own config that
+  can name a program (`core.fsmonitor`, `log.showSignature`). Hooks are turned off and Git LFS
+  downloads are skipped. git has no switch to ignore a repository's config altogether, so this
+  is a list, and each entry has a test.
+- Reading history never uses the network. A repository can declare a remote and leave out an
+  object so that git fetches it, and a fetch runs programs the repository names
+  (`core.sshCommand`, `remote.<name>.uploadpack`). All fetching is turned off while reading.
 - Clones come only from `https://github.com/<owner>/<repo>`. Submodules aren't fetched,
   symlinks are checked out as plain files, and git is never given credentials or allowed to
   ask for them.
@@ -23,10 +27,15 @@ code": a repository can also try to make git run programs for it.
   folder being analysed. Paths like `../../secret` are refused.
 - If a run is cancelled while cloning, git is stopped and the half-finished clone is deleted.
 
+A `.env` file in the current folder is not read, because that folder may be the repository
+you're analysing, and its settings could send the code to another server or open the API to
+the network. margin only reads an env file you name with `MARGIN_ENV_FILE`.
+
 The local loader reads whatever folder you point it at, because that's its job. The API is a
 local tool, so it has no notion of users or permissions: anyone who can reach it can ask it
-to read any folder the server can read. That's why it only listens on your own computer (see
-below). In Docker it can only see the folder you share with the container, read-only.
+to read any folder the server can read, and that includes other programs and other users on
+your computer. That's why it only listens on your own computer (see below), and why you
+shouldn't run it on a machine you share. In Docker it can only see the folder you share with the container, read-only.
 
 ## The model
 
@@ -47,7 +56,23 @@ model's opinion of that file, which is one more reason the detector's result is 
 estimate with evidence to check, and never a verdict.
 
 If you pick Anthropic or OpenAI as the provider, prompts leave your computer. For the AI Code
-Detector that means samples of the code it reads. The UI says so when you choose one.
+Detector that means samples of the code it reads. For the Data Storyteller it means the file
+name, column names, group names such as a category or region, and the computed facts; never a
+row of data. The UI says so when you choose one.
+
+## Files from strangers
+
+A data file is untrusted too.
+
+- Excel and Parquet files that would unpack to more than 2 GB are refused, because a small file
+  can otherwise fill the machine's memory. Macros and formulas in them are never run.
+- SQLite files are opened read-only, and their schema can't call functions with side effects.
+- The SQL that double-checks every number can't reach a file or the network, even if a column
+  name somehow got past the quoting.
+- Text in the cleaned CSV that a spreadsheet would run as a formula gets a `'` in front, and the
+  run says how many cells that changed.
+- Control characters are removed from reports, so an escape sequence in a commit message or a
+  cell can't rewrite what your terminal shows.
 
 ## Secrets
 
@@ -62,18 +87,24 @@ Settings page shows only their last four characters). Keys saved from the UI go 
 - It listens on `127.0.0.1` only, so nothing else on your network can reach it.
 - It answers only requests addressed to `localhost` or `127.0.0.1`. This stops a web page you
   visit from reaching it through DNS rebinding and reading your results.
-- Only the UI's own address may call it from a browser (CORS), and request bodies are
-  limited in size.
+- Only the UI's own address may call it from a browser (CORS), and any request that changes
+  something is refused if it comes from another web page, even one a browser sends without
+  asking first. Request bodies are limited in size. A page you add to
+  `MARGIN_API_CORS_ORIGINS`, such as the UI's dev server, gets full access.
 - Uploaded files are saved under a folder the API owns, with their names cleaned of folders
   and special characters, and deleted after an hour. Uploads have their own size limit
-  (`MARGIN_API_MAX_UPLOAD_BYTES`, 200 MB).
-- A run's files can only be downloaded from that run's own folder, by plain file name.
+  (`MARGIN_API_MAX_UPLOAD_BYTES`, 200 MB). If the server is killed rather than stopped, the
+  temporary folder stays until your system clears it; set `MARGIN_API_FILES_DIR` if that
+  matters to you.
+- A run writes only to its own folder: an output folder can't be chosen over HTTP. Its files can
+  only be downloaded from there, by plain file name.
 - The Docker container runs as an ordinary user, publishes its port on your computer only,
   and sees your files read-only.
 
 If you expose the API on a network on purpose (`MARGIN_API_HOST`), add your host name to
 `MARGIN_API_ALLOWED_HOSTS` and put something with authentication in front of it. margin has
-none of its own.
+none of its own. If that proxy changes the host name, also add the page's address to
+`MARGIN_API_CORS_ORIGINS`, or the UI's changes will be refused.
 
 ## Not supported yet
 

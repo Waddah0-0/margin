@@ -392,11 +392,47 @@ def test_request_body_limit(client: TestClient) -> None:
     assert chunked.status_code == 413
 
 
-def test_cors_allows_configured_origins_only(client: TestClient) -> None:
-    allowed = client.get("/health", headers={"Origin": "http://localhost:3000"})
-    assert allowed.headers["access-control-allow-origin"] == "http://localhost:3000"
-    denied = client.get("/health", headers={"Origin": "https://evil.example"})
+def test_cors_allows_configured_origins_only() -> None:
+    with make_client(cors_origins=["http://localhost:3000"]) as client:
+        allowed = client.get("/health", headers={"Origin": "http://localhost:3000"})
+        assert allowed.headers["access-control-allow-origin"] == "http://localhost:3000"
+        denied = client.get("/health", headers={"Origin": "https://evil.example"})
+        assert "access-control-allow-origin" not in denied.headers
+
+
+def test_no_other_web_page_is_allowed_by_default(client: TestClient) -> None:
+    denied = client.get("/health", headers={"Origin": "http://localhost:3000"})
     assert "access-control-allow-origin" not in denied.headers
+
+
+def test_other_web_pages_cannot_change_anything(client: TestClient) -> None:
+    # needs no preflight, so CORS alone would let it through
+    for origin in ("https://evil.example", "null", "http://localhost:3000"):
+        headers = {"Origin": origin, "Content-Type": "text/plain"}
+        assert client.post("/uploads?name=a.csv", content=b"x", headers=headers).status_code == 403
+        run = client.post("/agents/echo/runs", content=b'{"message": "hi"}', headers=headers)
+        assert run.status_code == 403
+    assert client.delete("/runs/x", headers={"Origin": "https://evil.example"}).status_code == 403
+
+
+def test_the_ui_and_other_programs_can_change_things(client: TestClient) -> None:
+    same = {"Origin": "http://127.0.0.1"}  # the test client's own address
+    assert client.post("/agents/echo/runs", json={"message": "hi"}, headers=same).status_code == 202
+    assert client.post("/agents/echo/runs", json={"message": "hi"}).status_code == 202  # no Origin
+    with make_client(cors_origins=["http://localhost:3000"]) as dev:
+        headers = {"Origin": "http://localhost:3000"}
+        assert (
+            dev.post("/agents/echo/runs", json={"message": "hi"}, headers=headers).status_code
+            == 202
+        )
+
+
+def test_a_json_body_needs_its_content_type() -> None:
+    # fetch() with a Blob body sends no Content-Type and no preflight; this fails on FastAPI < 0.132
+    with make_client() as client:
+        request = client.build_request("POST", "/agents/echo/runs", content=b'{"message": "hi"}')
+        request.headers.pop("content-type", None)
+        assert client.send(request).status_code == 422
 
 
 def test_finished_runs_expire() -> None:
@@ -586,15 +622,15 @@ def test_an_uploaded_file_is_read_and_the_run_files_downloaded(
     assert "attachment" in download.headers["content-disposition"]
 
 
-def test_an_output_folder_given_with_the_run_is_left_alone(
+def test_an_output_folder_cannot_be_chosen_over_http(
     files_client: TestClient, tmp_path: Path
 ) -> None:
     source = tmp_path / "in.txt"
     source.write_text("x")
-    run_id = start(files_client, "copier", {"source": str(source), "out": str(tmp_path / "mine")})
-    view = wait_for(files_client, run_id, {"done"})
-    assert (tmp_path / "mine" / "copy.txt").exists()
-    assert view["files"] == []  # only the run's own folder is served
+    body = {"source": str(source), "out": str(tmp_path / "mine")}
+    response = files_client.post("/agents/copier/runs", json=body)
+    assert response.status_code == 422 and "its own folder" in response.json()["detail"]
+    assert not (tmp_path / "mine").exists()
 
 
 def test_uploads_over_the_limit_or_empty_are_refused_and_not_kept(

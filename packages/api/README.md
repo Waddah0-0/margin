@@ -13,13 +13,14 @@ margin-api                   # open http://127.0.0.1:8000 (API docs at /docs)
 
 The web UI comes inside the package, so that one address is the whole app. The server only
 listens on `127.0.0.1`, which means nothing else on your network can reach it. You can change
-that and a few other things with `MARGIN_API_` environment variables (or a `.env` file):
+that and a few other things with `MARGIN_API_` environment variables (or a file named by
+`MARGIN_ENV_FILE`; a `.env` in the current folder is not read):
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `MARGIN_API_HOST` / `MARGIN_API_PORT` | `127.0.0.1` / `8000` | Where to listen. Change the host only if you mean to expose it. |
 | `MARGIN_API_ALLOWED_HOSTS` | `["127.0.0.1", "localhost"]` | Host names the API answers to. This blocks DNS-rebinding attacks from web pages; add your host name if you expose the API. |
-| `MARGIN_API_CORS_ORIGINS` | `["http://localhost:3000", "http://127.0.0.1:3000"]` | Web pages allowed to call it (JSON list). |
+| `MARGIN_API_CORS_ORIGINS` | `[]` | Other web pages allowed to call it (JSON list). The built-in UI needs none. Changes from any other page are refused. |
 | `MARGIN_API_LLM_CONCURRENCY` | `1` | Runs of agents that use a model, at once (one local GPU). |
 | `MARGIN_API_OTHER_CONCURRENCY` | `4` | Runs of other agents, at once. |
 | `MARGIN_API_RESULT_TTL_S` | `3600` | Seconds a finished run is kept. |

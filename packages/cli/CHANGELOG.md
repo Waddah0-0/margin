@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-11-02
+
+### Security
+- Warnings, errors and progress messages can no longer carry control characters or Rich markup
+  from a repository or a data file, which could rewrite what a terminal shows.
+
 ## [0.1.1] - 2026-10-29
 
 ### Added

@@ -49,6 +49,7 @@ from margin_cli.execution import (
     ExplicitLLMError,
     ProgressDisplay,
     TerminalQuestions,
+    escape,
     execute_cancellable,
     make_llm,
 )
@@ -279,9 +280,9 @@ def run_agent(
         else:
             typer.echo(report, nl=False)
         for warning in result.warnings:
-            stderr.print(f"[yellow]Warning:[/] {warning}", highlight=False)
+            stderr.print(f"[yellow]Warning:[/] {escape(warning)}", highlight=False)
         if result.status == "error":
-            stderr.print(f"[bold red]Run failed:[/] {result.error}", highlight=False)
+            stderr.print(f"[bold red]Run failed:[/] {escape(result.error or '')}", highlight=False)
     else:
         stderr.print("[yellow]Cancelled.[/]")
     raise typer.Exit(int(_exit_code(result, cancelled, strict)))

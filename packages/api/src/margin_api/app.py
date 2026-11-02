@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -164,6 +165,39 @@ class _BodyLimit:
         await send({"type": "http.response.body", "body": body})
 
 
+class _OriginCheck:
+    """Refuse changes asked for by another web page, with 403.
+
+    CORS only stops a page from reading the answer. A plain POST still reaches the server, so
+    without this any site you visit could fill the disk through ``/uploads``. Programs send no
+    ``Origin`` and aren't affected; the UI's own requests come from the address they go to.
+    """
+
+    READS = {"GET", "HEAD", "OPTIONS"}
+
+    def __init__(self, app: Any, allowed: list[str]) -> None:
+        self.app = app
+        self.allowed = allowed
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope.get("method") not in self.READS:
+            headers = dict(scope.get("headers") or [])
+            origin = headers.get(b"origin", b"").decode("latin-1")
+            host = headers.get(b"host", b"").decode("latin-1")
+            if origin and not self._allowed(origin, host):
+                body = json.dumps({"detail": "Requests from other web pages are refused"}).encode()
+                await send({"type": "http.response.start", "status": 403,
+                            "headers": [(b"content-type", b"application/json")]})  # fmt: skip
+                await send({"type": "http.response.body", "body": body})
+                return
+        await self.app(scope, receive, send)
+
+    def _allowed(self, origin: str, host: str) -> bool:
+        if origin in self.allowed or "*" in self.allowed:
+            return True
+        return bool(host) and urlsplit(origin).netloc == host  # "null" has no address
+
+
 LLMFactory = Callable[[str | None, str | None], LLMClient | None]
 
 
@@ -218,6 +252,7 @@ def create_app(
     ui_root = _ui_root(ui_dir) if ui_dir is not None else None
     if ui_root is not None:
         app.add_middleware(_UIPages, root=ui_root)
+    app.add_middleware(_OriginCheck, allowed=settings.cors_origins)
     # Only answer requests addressed to this machine by name. Without this, a web page could
     # use DNS rebinding to reach the API through a domain of its own and read local results.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
@@ -280,10 +315,14 @@ def create_app(
     ) -> RunCreated:
         cls = agent_class(agent_id)
         run_id = uuid.uuid4().hex
-        # an output folder left empty becomes the run's own, so its files can be downloaded
+        # an output folder is always the run's own, so its files can be downloaded and a caller
+        # can't write over files elsewhere on this machine
         for name in fields_with_format(cls.InputModel.model_json_schema(), OUTPUT_FORMAT):
-            if body.get(name) in (None, ""):
-                body = {**body, name: str(store.run_dir(run_id))}
+            if body.get(name) not in (None, ""):
+                raise HTTPException(
+                    422, f"{name} can't be set over HTTP: each run writes to its own folder"
+                )
+            body = {**body, name: str(store.run_dir(run_id))}
         try:
             parsed = cls.parse_input(body)
         except InputValidationError as exc:

@@ -69,7 +69,9 @@ The full guide is
 ## Settings
 
 Model settings are read from environment variables first, then from settings saved in the
-web UI, then from a `.env` file. The ones you are likely to need are `DEFAULT_LLM_PROVIDER`
+web UI, then from the file named by `MARGIN_ENV_FILE` (a `.env` in the current folder is not
+read, because it may belong to a repository being analysed). The ones you are likely to need
+are `DEFAULT_LLM_PROVIDER`
 (`local`, `anthropic` or `openai`), `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`,
 `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `MAX_COST_USD`.
 [.env.example](https://github.com/Waddah0-0/margin/blob/main/.env.example) lists them all.
