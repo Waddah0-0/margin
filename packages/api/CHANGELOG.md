@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- An upload named after a Windows device, such as `NUL` or `con.csv`, gets a `_` in front, so
+  Windows saves it as a file instead of throwing it away.
+
 ## [0.1.2] - 2026-11-02
 
 ### Added

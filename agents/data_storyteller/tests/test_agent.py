@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import sqlite3
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -105,6 +106,29 @@ async def test_a_spreadsheet_cannot_run_cells_of_the_clean_file(tmp_path: Path) 
     assert any("5 values in the cleaned CSV" in w for w in result.warnings)
     report = json.loads((tmp_path / "out" / "people.cleaning.json").read_text(encoding="utf-8"))
     assert any("spreadsheet formula" in n for n in report["source"]["notes"])
+
+
+async def test_a_table_name_cannot_lead_out_of_the_output_folder(tmp_path: Path) -> None:
+    path = tmp_path / "sales.sqlite"
+    with sqlite3.connect(path) as connection:
+        connection.execute("CREATE TABLE dummy (a INT)")
+        connection.execute('CREATE TABLE "/../../../escaped" (name TEXT, amount INT)')
+        connection.executemany(
+            'INSERT INTO "/../../../escaped" VALUES (?, ?)', [(f"r{i}", i) for i in range(5)]
+        )
+    connection.close()
+    out = tmp_path / "a" / "b" / "out"
+    result = await run(path, output_dir=str(out))
+    assert result.status == "ok", result.error
+    written = [Path(p) for p in result.data["files"]]
+    assert all(p.parent == out.resolve() for p in written)
+    stem = "sales._.._.._.._escaped"
+    assert [p.name for p in written] == [f"{stem}.clean.csv", f"{stem}.cleaning.json"]
+    assert files_under(tmp_path) == sorted(["sales.sqlite", *(p.name for p in written)])
+
+
+def files_under(folder: Path) -> list[str]:
+    return sorted(p.name for p in folder.rglob("*") if p.is_file())
 
 
 async def test_story_mode_sets_up_the_story(messy: dict[str, Path]) -> None:

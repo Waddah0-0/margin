@@ -73,6 +73,8 @@ def read_source(path: str | Path) -> Source:
         raise IngestError(f"No file at {p}")
     if p.is_dir():
         raise IngestError(f"{p} is a folder; give the path of one data file")
+    if not p.is_file():  # a device or a pipe: it has no size to check and may never end
+        raise IngestError(f"{p} is not an ordinary file")
     size = p.stat().st_size
     if size > MAX_FILE_BYTES:
         raise IngestError(

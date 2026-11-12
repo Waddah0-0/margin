@@ -22,6 +22,10 @@ UPLOAD_FORMAT = "file-path"  # the UI offers to upload a file and fills in where
 OUTPUT_FORMAT = "output-dir"  # left empty, the API fills in the run's own folder
 
 _UNSAFE = re.compile(r"[^\w.\- ()]+")
+# names Windows keeps for devices: a file called NUL is thrown away as it's written
+_DEVICES = frozenset(
+    {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(10)), *(f"LPT{i}" for i in range(10))}
+)
 
 
 class RunFile(BaseModel):
@@ -33,6 +37,8 @@ def safe_name(name: str) -> str:
     """A file name with no folders and no characters that mean something to a shell or OS."""
     base = re.split(r"[\\/]", name)[-1]
     cleaned = _UNSAFE.sub("_", base).strip(" .")[:120]
+    if cleaned.split(".")[0].rstrip().upper() in _DEVICES:
+        cleaned = "_" + cleaned
     return cleaned or "upload"
 
 

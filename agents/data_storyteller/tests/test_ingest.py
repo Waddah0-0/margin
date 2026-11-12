@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -108,6 +109,12 @@ def test_clear_errors(tmp_path: Path, name: str, content: bytes | None, message:
         path.write_bytes(content)
     with pytest.raises(IngestError, match=message):
         read_source(path)
+
+
+def test_a_device_is_refused_before_it_is_read() -> None:
+    # /dev/null, or NUL on Windows: not a folder, but no file to read either
+    with pytest.raises(IngestError, match="not an ordinary file"):
+        read_source(os.devnull)
 
 
 def test_the_upload_picker_offers_exactly_the_types_the_reader_supports(tmp_path: Path) -> None:

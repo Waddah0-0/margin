@@ -657,6 +657,11 @@ def test_upload_names_cannot_leave_the_upload_folder(
     assert safe_name("sales; rm -rf.csv") == "sales_ rm -rf.csv"
     assert safe_name("مبيعات.xlsx") == "مبيعات.xlsx"  # letters of any script are kept
     assert safe_name("..") == "upload"
+    # names Windows keeps for devices: NUL would throw the upload away
+    assert safe_name("NUL") == "_NUL"
+    assert safe_name("con.csv") == "_con.csv"
+    assert safe_name("com1 .csv") == "_com1 .csv"
+    assert safe_name("console.csv") == "console.csv"
 
 
 def test_only_a_runs_own_files_can_be_downloaded(files_client: TestClient, tmp_path: Path) -> None:

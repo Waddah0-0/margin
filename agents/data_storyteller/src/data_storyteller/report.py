@@ -32,6 +32,7 @@ READ_AS = {"number": "numbers", "date": "dates", "text": "text", "empty": "empty
 TOP_FACTS = 10
 FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 PLAIN_SIGNED = re.compile(r"^[+-][\d\s().,-]*$")  # -5 or +1 (555) 010-0100: harmless, left alone
+UNSAFE_IN_NAME = re.compile(r"[^\w.\- ()]+")
 
 TITLES = {
     "header": "Where the data starts",
@@ -257,13 +258,16 @@ def write(
 ) -> tuple[list[str], int]:
     """Write the cleaned table (CSV) and the report (JSON). Returns the paths written and how
     many cells were quoted because a spreadsheet would run them as formulas."""
-    out = Path(folder).expanduser()
+    out = Path(folder).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
-    stem = Path(data.source.file).stem
+    stem = _name_part(Path(data.source.file).stem)
     if len(data.source.tables) > 1:
-        stem += f".{data.source.table}"
+        # a table name comes from the file: "/../../x" must not lead out of the folder
+        stem += f".{_name_part(data.source.table)}"
     csv_path = out / f"{stem}.clean.csv"
     report_path = out / f"{stem}.cleaning.json"
+    if csv_path.resolve().parent != out or report_path.resolve().parent != out:
+        raise ValueError(f"Refusing to write {stem!r} outside {out}")
     frame = clean.frame.copy()
     for column, kind in clean.kinds.items():
         if kind == "date" and column in frame:
@@ -279,6 +283,11 @@ def write(
     report["answers"] = [a.model_dump(mode="json") for a in answers.values()]
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     return [str(csv_path), str(report_path)], quoted
+
+
+def _name_part(text: str) -> str:
+    """Part of a file name: no folders and no characters that mean something to an OS."""
+    return UNSAFE_IN_NAME.sub("_", text).strip(" .")[:80] or "table"
 
 
 def formula_note(quoted: int) -> str:

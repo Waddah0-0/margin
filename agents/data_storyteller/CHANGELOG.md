@@ -6,6 +6,14 @@ All notable changes to this agent are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+- A table name in a SQLite file could lead the cleaned CSV and the report out of the output
+  folder. Names are now cleaned of folders and special characters before they're used.
+
+### Fixed
+- A table name with a `/` in it no longer stops the run on Linux and macOS.
+- A path to a device or a pipe is refused with a clear error instead of being read.
+
 ## [0.1.1] - 2026-11-02
 
 ### Added
