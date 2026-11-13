@@ -622,6 +622,17 @@ def test_an_uploaded_file_is_read_and_the_run_files_downloaded(
     assert "attachment" in download.headers["content-disposition"]
 
 
+def test_a_run_shows_its_input_without_its_own_folder(
+    files_client: TestClient, tmp_path: Path
+) -> None:
+    source = tmp_path / "in.txt"
+    source.write_text("x")
+    run_id = start(files_client, "copier", {"source": str(source), "out": None})
+    view = wait_for(files_client, run_id, {"done"})
+    assert view["input"] == {"source": str(source)}  # sent again, it repeats the run
+    assert start(files_client, "copier", view["input"])
+
+
 def test_an_output_folder_cannot_be_chosen_over_http(
     files_client: TestClient, tmp_path: Path
 ) -> None:

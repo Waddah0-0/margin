@@ -1067,6 +1067,12 @@
             ],
             "title": "Finished At"
           },
+          "input": {
+            "additionalProperties": true,
+            "description": "The input as the caller sent it, without the run's own output folder. Send it again to repeat the run.",
+            "title": "Input",
+            "type": "object"
+          },
           "last_event": {
             "default": 0,
             "description": "Number of the latest event; this view already includes it.",

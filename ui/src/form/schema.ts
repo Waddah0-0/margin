@@ -163,6 +163,15 @@ export function initialValues(fields: Field[]): FormValues {
   return Object.fromEntries(fields.map((f) => [f.name, initialValue(f)]));
 }
 
+/** Form values for an input that was sent before, so a run can be repeated or changed. */
+export function valuesFromInput(fields: Field[], input: Record<string, unknown>): FormValues {
+  return Object.fromEntries(
+    fields
+      .filter((f) => f.name in input)
+      .map((f) => [f.name, initialValue({ ...f, default: input[f.name] })]),
+  );
+}
+
 /** The typed value for one field, or undefined when it should be left out. */
 function typed(field: Field, value: FormValue): { ok: true; value: unknown } | { ok: false; error: string } {
   switch (field.kind) {

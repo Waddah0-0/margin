@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { useLocation, useParams } from "react-router";
 import { useAgents } from "../api/hooks";
 import { LinkButton } from "../components/Button";
@@ -6,6 +7,7 @@ import { PageHead } from "../components/PageHead";
 import { EmptyState, ErrorState } from "../components/States";
 import { SchemaForm } from "../form/SchemaForm";
 import type { FormValues } from "../form/schema";
+import { usePageTitle } from "../lib/title";
 import { agentIntroFor } from "../results/registry";
 
 export function AgentPage() {
@@ -15,6 +17,7 @@ export function AgentPage() {
   const agent = agents.data?.agents.find((a) => a.id === agentId);
   const loadError = agents.data?.load_errors?.[agentId];
   const Intro = agentIntroFor(agentId);
+  usePageTitle(agent?.name ?? agentId);
 
   if (agents.loading && !agents.data) return <PageLoading label="Loading agent" />;
   if (agents.error) return <ErrorState error={agents.error} onRetry={agents.reload} />;
@@ -52,7 +55,11 @@ export function AgentPage() {
         }
       />
       <SchemaForm key={agent.id} agent={agent} initial={(location.state as FormValues | null) ?? undefined} />
-      {Intro && <Intro agent={agent} />}
+      {Intro && (
+        <Suspense fallback={null}>
+          <Intro agent={agent} />
+        </Suspense>
+      )}
     </>
   );
 }

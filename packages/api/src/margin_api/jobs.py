@@ -59,6 +59,7 @@ class Run:
     id: str
     agent_id: str
     pool: str
+    input: dict[str, Any] = field(default_factory=dict)  # as the caller sent it
     status: RunStatus = "queued"
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     started_at: datetime | None = None

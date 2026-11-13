@@ -5,9 +5,11 @@ import { PageLoading } from "../components/Loading";
 import { PageHead } from "../components/PageHead";
 import { RunList } from "../components/RunList";
 import { EmptyState, ErrorState } from "../components/States";
+import { usePageTitle } from "../lib/title";
 import styles from "./pages.module.css";
 
 export function RunsPage() {
+  usePageTitle("Runs");
   const runs = useRuns(100);
   const agents = useAgents();
 

@@ -90,6 +90,11 @@ class RunView(BaseModel):
         default_factory=list,
         description="Files the run wrote to its own folder; download from /runs/{id}/files/{name}.",
     )
+    input: dict[str, Any] = Field(
+        default_factory=dict,
+        description="The input as the caller sent it, without the run's own output folder. "
+        "Send it again to repeat the run.",
+    )
 
 
 class Upload(BaseModel):
@@ -281,6 +286,7 @@ def create_app(
             finished_at=run.finished_at, result=run.result,
             llm=llm, question=run.question, last_event=run.last_event,
             files=store.run_files(run.id) if run.status == "done" else [],
+            input=run.input,
         )  # fmt: skip
 
     @app.get("/health", tags=["meta"])
@@ -315,9 +321,11 @@ def create_app(
     ) -> RunCreated:
         cls = agent_class(agent_id)
         run_id = uuid.uuid4().hex
+        output_fields = fields_with_format(cls.InputModel.model_json_schema(), OUTPUT_FORMAT)
+        sent = {k: v for k, v in body.items() if k not in output_fields}
         # an output folder is always the run's own, so its files can be downloaded and a caller
         # can't write over files elsewhere on this machine
-        for name in fields_with_format(cls.InputModel.model_json_schema(), OUTPUT_FORMAT):
+        for name in output_fields:
             if body.get(name) not in (None, ""):
                 raise HTTPException(
                     422, f"{name} can't be set over HTTP: each run writes to its own folder"
@@ -337,6 +345,7 @@ def create_app(
                     raise HTTPException(422, f"Cannot use that model: {exc}") from exc
                 logger.warning("No model client for %s: %s", agent_id, exc)
         run = manager.submit(cls, parsed, llm=llm, provider=resolved, run_id=run_id)
+        run.input = sent
         return RunCreated(
             run_id=run.id,
             status=run.status,

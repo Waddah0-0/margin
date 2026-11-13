@@ -4,9 +4,11 @@ import { Block, ListHead } from "../components/Block";
 import { PageLoading } from "../components/Loading";
 import { PageHead } from "../components/PageHead";
 import { EmptyState, ErrorState } from "../components/States";
+import { usePageTitle } from "../lib/title";
 import styles from "./pages.module.css";
 
 export function AgentsPage() {
+  usePageTitle("Agents");
   const agents = useAgents();
   const list = agents.data?.agents ?? [];
   const failed = Object.entries(agents.data?.load_errors ?? {});

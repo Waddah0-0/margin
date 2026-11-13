@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `RunView.input`: the input as the caller sent it, without the run's own output folder.
+  Sending it again repeats the run; the web UI uses it for "Run again".
+
 ### Fixed
 - An upload named after a Windows device, such as `NUL` or `con.csv`, gets a `_` in front, so
   Windows saves it as a file instead of throwing it away.

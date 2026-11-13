@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Suspense } from "react";
 import { describe, expect, it } from "vitest";
 import type { AgentResult, RunView } from "../../api/client";
 import { resultViewFor } from "../registry";
@@ -182,8 +183,14 @@ describe("detector data", () => {
 });
 
 describe("DetectorResult", () => {
-  it("is the registered view for the detector", () => {
-    expect(resultViewFor("ai-code-detector")).toBe(DetectorResult);
+  it("is the registered view for the detector, loaded when first shown", async () => {
+    const View = resultViewFor("ai-code-detector");
+    render(
+      <Suspense fallback={<p>loading</p>}>
+        <View run={run} result={result} />
+      </Suspense>,
+    );
+    expect(await screen.findByText("0.71")).toBeTruthy();
   });
 
   it("shows the estimate, markers, evidence, marked code and history", async () => {

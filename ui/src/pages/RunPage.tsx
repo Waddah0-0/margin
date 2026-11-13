@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api, call, isFinished, type ProgressEvent, type RunView } from "../api/client";
 import { useAgents, useLiveRun } from "../api/hooks";
@@ -12,7 +12,9 @@ import { Progress } from "../components/Progress";
 import { EmptyState, ErrorState } from "../components/States";
 import { StatusChip } from "../components/StatusChip";
 import { QuestionForm } from "../form/QuestionForm";
+import { fieldsFromSchema, valuesFromInput } from "../form/schema";
 import { duration, ordinal, secondsBetween, shortId } from "../lib/format";
+import { usePageTitle } from "../lib/title";
 import { resultViewFor } from "../results/registry";
 import styles from "./pages.module.css";
 
@@ -55,6 +57,28 @@ function headline(run: RunView, cancelling: boolean): { title: string; detail?: 
         };
       return run.progress?.message ? { title: run.progress.message, said: true } : { title: "Starting" };
   }
+}
+
+/** What the tab says, so a run can be left in the background: where it stands, then whose. */
+function tabTitle(run: RunView | undefined, name: string | undefined): string | null {
+  if (!run) return null;
+  const who = name ?? run.agent_id;
+  const fraction = run.progress?.fraction;
+  const state =
+    run.status === "queued"
+      ? "Queued"
+      : run.status === "waiting"
+        ? "Needs your answer"
+        : run.status === "running"
+          ? fraction != null
+            ? `${Math.round(fraction * 100)}%`
+            : "Running"
+          : run.status === "cancelled"
+            ? "Cancelled"
+            : run.result?.status === "error"
+              ? "Failed"
+              : "Done";
+  return `${state} · ${who}`;
 }
 
 interface Stage {
@@ -139,6 +163,8 @@ export function RunPage() {
   const live = run ? !isFinished(run.status) : false;
   const working = live && run?.status !== "waiting";
   const now = useNow(live);
+  const agent = agents.data?.agents.find((a) => a.id === run?.agent_id);
+  usePageTitle(missing ? "Run expired" : tabTitle(run, agent?.name));
 
   if (missing) {
     return (
@@ -158,8 +184,12 @@ export function RunPage() {
   if (error && !run) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
   if (!run) return <PageLoading label="Loading run" />;
 
-  const agent = agents.data?.agents.find((a) => a.id === run.agent_id);
   const name = agent?.name ?? run.agent_id;
+  // the same input again, on the agent's form, to run as it was or change first
+  const again =
+    agent && run.input && Object.keys(run.input).length
+      ? valuesFromInput(fieldsFromSchema(agent.input_schema, agent.primary_input), run.input)
+      : undefined;
   const stopping = cancelling && (run.status === "running" || run.status === "waiting");
   const { title, detail, said } = live ? headline(run, stopping) : { title: name };
   const fraction =
@@ -251,8 +281,17 @@ export function RunPage() {
                 {cancelling ? "Cancelling" : "Cancel"}
               </Button>
             ) : (
-              <LinkButton variant="outlined" to={`/agents/${run.agent_id}`} icon="replay" viewTransition>
-                New run
+              <LinkButton
+                variant="outlined"
+                to={`/agents/${run.agent_id}`}
+                state={again}
+                icon="replay"
+                title={
+                  again ? "Opens the form with this run's input, to run again or change first" : undefined
+                }
+                viewTransition
+              >
+                {again ? "Run again" : "New run"}
               </LinkButton>
             )}
             {cancelError && <span className={styles.runError}>{cancelError}</span>}
@@ -267,7 +306,9 @@ export function RunPage() {
       <RunLog run={run} timeline={timeline} working={working} />
 
       {run.result && (run.status === "done" || run.result.status !== "error") ? (
-        <ResultView run={run} result={run.result} />
+        <Suspense fallback={<PageLoading label="Loading the result" />}>
+          <ResultView run={run} result={run.result} />
+        </Suspense>
       ) : run.status === "cancelled" ? (
         <EmptyState label="No result" title="Cancelled before it finished">
           <p>The run was cancelled before the agent finished, so there is nothing to show.</p>

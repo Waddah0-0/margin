@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildPayload, cliCommand, fieldsFromSchema, humanize, initialValues } from "./schema";
+import {
+  buildPayload,
+  cliCommand,
+  fieldsFromSchema,
+  humanize,
+  initialValues,
+  valuesFromInput,
+} from "./schema";
 
 // The AI Code Detector's input schema, as the API returns it (trimmed).
 const detector = {
@@ -93,6 +100,21 @@ describe("buildPayload", () => {
       max_judge_seconds: "More than 0",
       extra: "Not valid JSON",
     });
+  });
+});
+
+describe("valuesFromInput", () => {
+  it("fills the form with a run's input, which builds the same body again", () => {
+    const fields = fieldsFromSchema(detector, "target");
+    const input = {
+      target: "https://github.com/a/b",
+      paths: ["src"],
+      use_llm_judge: false,
+      max_files_for_judge: 5,
+    };
+    const values = { ...initialValues(fields), ...valuesFromInput(fields, input) };
+    expect(values.max_files_for_judge).toBe("5");
+    expect(buildPayload(fields, values)).toEqual({ payload: input, errors: {} });
   });
 });
 

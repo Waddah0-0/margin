@@ -5,13 +5,23 @@
  * - intros: an optional panel on the agent's page that explains what the agent does,
  *   shown under its name. Agents without one just show their description.
  * The AI Code Detector has both, built in.
+ *
+ * The built-in views are loaded when first shown, so their code (charts, the file explorer)
+ * stays out of the pages that never need it. Render them inside a Suspense boundary.
  */
-import type { ComponentType } from "react";
+import { type ComponentType, lazy } from "react";
 import type { AgentInfo, AgentResult, RunView } from "../api/client";
-import { DetectorIntro } from "./detector/DetectorIntro";
-import { DetectorResult } from "./detector/DetectorResult";
 import { GenericResult } from "./GenericResult";
-import { StorytellerResult } from "./storyteller/StorytellerResult";
+
+const DetectorResult = lazy(() =>
+  import("./detector/DetectorResult").then((m) => ({ default: m.DetectorResult })),
+);
+const DetectorIntro = lazy(() =>
+  import("./detector/DetectorIntro").then((m) => ({ default: m.DetectorIntro })),
+);
+const StorytellerResult = lazy(() =>
+  import("./storyteller/StorytellerResult").then((m) => ({ default: m.StorytellerResult })),
+);
 
 export interface ResultViewProps {
   run: RunView;

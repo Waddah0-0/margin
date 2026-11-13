@@ -25,6 +25,7 @@ import { PageLoading } from "../components/Loading";
 import { PageHead } from "../components/PageHead";
 import { ErrorState } from "../components/States";
 import { PlainTextField } from "../form/Fields";
+import { usePageTitle } from "../lib/title";
 import styles from "./SettingsPage.module.css";
 
 /** The host part of a local server address, so presets can keep it (e.g. in Docker). */
@@ -203,6 +204,7 @@ function ModelPicker({
 }
 
 export function SettingsPage() {
+  usePageTitle("Settings");
   const loaded = useLoad(fetchLLMSettings);
   const [settings, setSettings] = useState<LLMSettings>();
   const [draft, setDraft] = useState<Draft>();

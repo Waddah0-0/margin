@@ -727,6 +727,13 @@ export interface components {
             /** Finished At */
             finished_at: string | null;
             /**
+             * Input
+             * @description The input as the caller sent it, without the run's own output folder. Send it again to repeat the run.
+             */
+            input?: {
+                [key: string]: unknown;
+            };
+            /**
              * Last Event
              * @description Number of the latest event; this view already includes it.
              * @default 0
