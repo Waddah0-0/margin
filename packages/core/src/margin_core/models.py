@@ -166,7 +166,12 @@ class Question(_StrictModel):
         for v in values:
             choice = self._choice(v)
             labels.append(choice.label if choice is not None else str(v))
-        return ", ".join(labels)
+        if len(labels) == 1:
+            return labels[0]
+        # several answers: a label that is a whole sentence loses its full stop, and labels
+        # that have commas of their own are kept apart with semicolons
+        labels = [label.rstrip(".") for label in labels]
+        return ("; " if any("," in label for label in labels) else ", ").join(labels)
 
 
 class Answer(_StrictModel):

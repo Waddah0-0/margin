@@ -96,6 +96,23 @@ def test_other_text_is_accepted_only_when_allowed() -> None:
     assert grain.describe("order line") == "order line"
 
 
+def test_several_answers_read_as_one_list() -> None:
+    pick = Question(
+        id="pick", prompt="Which?", kind="multi_choice", default=["a", "b"],
+        choices=[
+            Choice(value="a", label="North is the largest region, with 31% of revenue."),
+            Choice(value="b", label="Juice grew 12%."),
+            Choice(value="c", label="Tea"),
+            Choice(value="d", label="Coffee"),
+        ],
+    )  # fmt: skip
+    assert pick.describe(["a", "b"]) == (
+        "North is the largest region, with 31% of revenue; Juice grew 12%"
+    )
+    assert pick.describe(["c", "d"]) == "Tea, Coffee"
+    assert pick.describe(["b"]) == "Juice grew 12%."
+
+
 def test_resolve_fills_defaults_and_lists_every_problem() -> None:
     batch = QuestionBatch(title="Check", questions=[FORMAT, COLUMNS, CONTEXT])
     answers = batch.resolve({"date_format": "dmy"}, "user")

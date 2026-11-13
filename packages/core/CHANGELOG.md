@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- An answer with several choices reads as one list: sentence labels lose their full stop and
+  are kept apart with semicolons when they have commas of their own. The "Not confirmed"
+  warning no longer ends in two full stops.
+
 ## [0.1.3] - 2026-11-02
 
 ### Security
