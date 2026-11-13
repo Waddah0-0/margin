@@ -1,7 +1,7 @@
 import { createBrowserRouter, Outlet, RouterProvider, ScrollRestoration } from "react-router";
 import styles from "./App.module.css";
 import { LinkButton } from "./components/Button";
-import { NavRail } from "./components/NavRail";
+import { Footer, TopBar } from "./components/Shell";
 import { EmptyState } from "./components/States";
 import { AgentPage } from "./pages/AgentPage";
 import { AgentsPage } from "./pages/AgentsPage";
@@ -13,10 +13,11 @@ import { SettingsPage } from "./pages/SettingsPage";
 function Layout() {
   return (
     <div className={styles.shell}>
-      <NavRail />
+      <TopBar />
       <main className={styles.main}>
         <Outlet />
       </main>
+      <Footer />
       <ScrollRestoration />
     </div>
   );
@@ -25,10 +26,10 @@ function Layout() {
 function NotFound() {
   return (
     <EmptyState
-      icon="lost"
+      label="Not found"
       title="Nothing here"
       action={
-        <LinkButton variant="tonal" to="/" icon="home">
+        <LinkButton variant="outlined" to="/" icon="back">
           Home
         </LinkButton>
       }

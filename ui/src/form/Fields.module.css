@@ -1,408 +1,307 @@
+/* Fields: the label above, the box, a line of help below. Nothing floats or animates into
+   place; a form should hold still while you fill it in. */
+
 .group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  gap: 6px;
+  max-width: 620px;
 }
 
-/* ---- outlined text field with a floating label -------------------------------------- */
+.group[data-width="short"] {
+  max-width: 280px;
+}
 
-.outlined {
-  --outline-color: var(--outline);
-  --outline-width: 1px;
-  position: relative;
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--ink);
+}
+
+.required {
+  color: var(--red);
+}
+
+.box {
   display: flex;
   align-items: center;
-  min-height: 56px;
-  padding: 0 16px;
-  border-radius: var(--shape-xs);
-  box-shadow: inset 0 0 0 var(--outline-width) var(--outline-color);
-  background: transparent;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
   cursor: text;
-  transition: box-shadow var(--dur-short4) var(--ease-standard);
+  transition:
+    border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
 }
 
-.outlined[data-size="l"] {
-  min-height: 64px;
-  border-radius: var(--shape-md);
-  font-size: 18px;
+.box:hover {
+  border-color: var(--ink-3);
 }
 
-.outlined:hover {
-  --outline-color: var(--on-surface);
+.box:focus-within {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--blue-tint);
 }
 
-.outlined:focus-within {
-  --outline-color: var(--primary);
-  --outline-width: 2px;
+.box[data-error="true"] {
+  border-color: var(--red);
 }
 
-.outlined[data-error="true"] {
-  --outline-color: var(--error);
+.box[data-error="true"]:focus-within {
+  box-shadow: 0 0 0 3px var(--red-tint);
+}
+
+.box[data-size="l"] {
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 16px;
+}
+
+.box[data-multiline="true"] {
+  padding: 8px 12px;
+  align-items: stretch;
 }
 
 .input {
   flex: 1;
+  width: 100%;
   min-width: 0;
-  padding: 16px 0 16px;
+  padding: 0;
   border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: inherit;
-  line-height: 24px;
-  color: var(--on-surface);
-  appearance: none;
-}
-
-.input:focus-visible {
+  background: none;
   outline: none;
+  font: inherit;
+  color: var(--ink);
 }
 
-/* the example shows only once the label has moved out of the way */
 .input::placeholder {
-  color: transparent;
-  transition: color var(--dur-short4) var(--ease-standard);
+  color: var(--ink-3);
+  opacity: 0.8;
 }
 
-.input:focus::placeholder {
-  color: color-mix(in srgb, var(--on-surface-variant) 70%, transparent);
+.input:disabled {
+  color: var(--ink-3);
 }
 
 textarea.input {
+  display: block;
+  min-height: 72px;
+  line-height: 20px;
   resize: vertical;
-  padding-top: 18px;
 }
 
 select.input {
+  appearance: none;
   cursor: pointer;
-  padding-right: 32px;
 }
 
 .code {
   font-family: var(--font-mono);
   font-size: 13px;
-  line-height: 20px;
-}
-
-.outlined[data-multiline="true"] {
-  align-items: stretch;
-}
-
-.floating {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  padding: 0 4px;
-  translate: 0 -50%;
-  color: var(--on-surface-variant);
-  background: var(--field-bg, var(--surface));
-  font-size: inherit;
-  line-height: 20px;
-  pointer-events: none;
-  white-space: nowrap;
-  transform-origin: left center;
-  transition:
-    top var(--spring-fast-spatial-duration) var(--spring-fast-spatial),
-    scale var(--spring-fast-spatial-duration) var(--spring-fast-spatial),
-    color var(--dur-short4) var(--ease-standard);
-}
-
-.outlined[data-multiline="true"] .floating {
-  top: 28px;
-}
-
-/* label floats onto the outline when the field has focus or a value */
-.outlined:focus-within .floating,
-.input:not(:placeholder-shown) ~ .floating,
-.outlined[data-filled="true"] .floating {
-  top: 0;
-  scale: 0.75;
-}
-
-.outlined:focus-within .floating {
-  color: var(--primary);
-}
-
-.outlined[data-error="true"] .floating {
-  color: var(--error);
 }
 
 .suffix {
-  margin-left: 12px;
-  color: var(--on-surface-variant);
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
   white-space: nowrap;
 }
 
 .dropdown {
-  position: absolute;
-  right: 12px;
+  color: var(--ink-3);
   pointer-events: none;
-  color: var(--on-surface-variant);
 }
 
 .support {
   display: flex;
-  gap: 4px;
-  align-items: flex-start;
-  padding: 0 16px;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.4px;
-  color: var(--on-surface-variant);
+  gap: 6px;
+  align-items: baseline;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--ink-3);
+}
+
+.support :global(.icon) {
+  align-self: center;
 }
 
 .support[data-error="true"] {
-  color: var(--error);
+  color: var(--red);
 }
 
-/* ---- rows with a label on the left and a control on the right --------------------- */
+/* ---- a setting on one line: what it is on the left, the control on the right ---- */
 
-.switchRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 24px;
-  padding: 4px 0;
+  align-items: start;
+  max-width: 620px;
 }
 
-.switchText {
-  display: flex;
-  flex-direction: column;
+.rowText {
+  display: grid;
   gap: 2px;
-  min-width: 0;
 }
 
-.switchText .support {
-  padding: 0;
-}
-
-.switchLabel {
-  font-size: 16px;
-  line-height: 24px;
-  letter-spacing: 0.5px;
-  color: var(--on-surface);
-}
-
-/* M3 switch: the handle grows when on, and shrinks while pressed */
 .switch {
   position: relative;
-  flex-shrink: 0;
-  width: 52px;
-  height: 32px;
+  width: 36px;
+  height: 20px;
   margin: 0;
-  border-radius: var(--shape-full);
-  background: var(--surface-container-highest);
-  box-shadow: inset 0 0 0 2px var(--outline);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
   appearance: none;
   cursor: pointer;
-  transition: background-color var(--dur-short4) var(--ease-standard),
-    box-shadow var(--dur-short4) var(--ease-standard);
+  transition:
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
 }
 
-.switch::before {
+.switch::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 16px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--outline);
-  translate: -50% -50%;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--ink-3);
   transition:
-    left var(--spring-fast-spatial-duration) var(--spring-fast-spatial),
-    width var(--spring-fast-spatial-duration) var(--spring-fast-spatial),
-    height var(--spring-fast-spatial-duration) var(--spring-fast-spatial),
-    background-color var(--dur-short4) var(--ease-standard);
+    translate var(--med) var(--ease),
+    background-color var(--fast) var(--ease);
+}
+
+.switch:hover {
+  border-color: var(--ink-3);
 }
 
 .switch:checked {
-  background: var(--primary);
-  box-shadow: none;
+  border-color: var(--ink);
+  background: var(--ink);
 }
 
-.switch:checked::before {
-  left: 36px;
-  width: 24px;
-  height: 24px;
-  background: var(--on-primary);
-}
-
-.switch:active::before {
-  width: 28px;
-  height: 28px;
-}
-
-.switch:focus-visible {
-  outline: 3px solid var(--secondary);
-  outline-offset: 2px;
-}
-
-/* ---- segmented buttons ------------------------------------------------------------- */
-
-.fieldset {
-  margin: 0;
-  padding: 4px 0;
-  border: 0;
-  min-width: 0;
-}
-
-.fieldset legend {
-  padding: 0;
-  float: left; /* lets the legend sit inside the flex row like a normal label */
+.switch:checked::after {
+  background: var(--on-ink);
+  translate: 16px 0;
 }
 
 .segmented {
   display: inline-flex;
-  flex-shrink: 0;
-  height: 40px;
-  border-radius: var(--shape-full);
-  box-shadow: inset 0 0 0 1px var(--outline);
-  overflow: hidden;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
 }
 
 .segment {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 64px;
-  padding: 0 16px;
-  border: 0;
-  background: transparent;
-  color: var(--on-surface);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.1px;
+  display: block;
   cursor: pointer;
-  user-select: none;
-  transition: background-color var(--dur-short4) var(--ease-standard);
 }
 
 .segment + .segment {
-  box-shadow: inset 1px 0 0 var(--outline);
+  border-left: 1px solid var(--rule-2);
 }
 
-.segment:has(:focus-visible) {
-  outline: 3px solid var(--secondary);
-  outline-offset: -3px;
-}
-
-.segment:hover {
-  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
-}
-
-.segment:has(:checked) {
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
-}
-
-.check {
-  display: inline-grid;
-  width: 0;
-  overflow: hidden;
-  opacity: 0;
+.segment span {
+  display: block;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 28px;
+  color: var(--ink-2);
   transition:
-    width var(--spring-fast-spatial-duration) var(--spring-fast-spatial),
-    opacity var(--dur-short4) var(--ease-standard);
+    background-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
 }
 
-.segment:has(:checked) .check {
-  width: 18px;
-  opacity: 1;
+.segment:hover span {
+  color: var(--ink);
 }
 
-/* ---- input chips --------------------------------------------------------------------- */
+.segment input:checked + span {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.segment input:focus-visible + span {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* ---- lists ---- */
 
 .chips {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  padding: 12px 0;
+  gap: 6px;
+  padding-block: 6px;
 }
 
 .chips .input {
-  padding: 4px 0;
-  min-width: 120px;
+  flex: 1 1 80px;
+  min-height: 24px;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 32px;
-  padding: 0 4px 0 12px;
-  border-radius: var(--shape-sm);
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
-  font-size: 14px;
-  font-weight: 500;
-  animation: chip-in var(--spring-fast-spatial-duration) var(--spring-fast-spatial);
-}
-
-.chipText {
+  gap: 2px;
+  padding-left: 7px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper);
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 400;
+  font-size: 12px;
+  line-height: 22px;
 }
 
 .chipRemove {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
+  width: 22px;
+  height: 22px;
+  color: var(--ink-3);
 }
 
 .chipRemove:hover {
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--red);
 }
 
-@keyframes chip-in {
-  from { scale: 0.6; opacity: 0; }
-}
-
-/* a floated label leaves room for the placeholder, so show it */
-.outlined[data-filled="true"] .input::placeholder {
-  color: color-mix(in srgb, var(--on-surface-variant) 75%, transparent);
-}
-
-/* ---- a file: drop or choose it, and it is uploaded ------------------------------------- */
-
-.fileLabel {
-  padding: 0 4px;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--on-surface-variant);
-}
+/* ---- files ---- */
 
 .drop {
   display: flex;
   align-items: center;
-  min-height: 88px;
-  padding: 12px 16px;
-  border: 1px dashed var(--outline);
-  border-radius: var(--shape-md);
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px dashed var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
   transition:
-    background var(--dur-short4) var(--ease-standard),
-    border-color var(--dur-short4) var(--ease-standard);
+    border-color var(--fast) var(--ease),
+    background-color var(--fast) var(--ease);
+}
+
+.drop[data-filled] {
+  border-style: solid;
 }
 
 .drop[data-dragging] {
-  border: 2px solid var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-color: var(--blue);
+  border-style: solid;
+  background: var(--blue-tint);
 }
 
 .drop[data-error] {
-  border-color: var(--error);
+  border-color: var(--red);
 }
 
 .empty,
@@ -410,84 +309,81 @@ select.input {
 .sending {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px 12px;
+  align-items: center;
   width: 100%;
-  color: var(--on-surface-variant);
+  color: var(--ink-2);
 }
 
-.empty {
-  justify-content: center;
-}
-
-.chosen {
-  color: var(--on-surface);
+.accepts {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
 }
 
 .fileName {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   min-width: 0;
-  overflow-wrap: anywhere;
-  font-weight: 500;
-  color: var(--on-surface);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fileSize {
   font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--on-surface-variant);
+  font-size: 11.5px;
+  color: var(--ink-3);
 }
 
 .fileActions {
   display: flex;
-  gap: 4px;
+  gap: 14px;
   margin-left: auto;
 }
 
 .progress {
-  flex: 1 1 160px;
-  height: 4px;
+  flex: 1;
+  min-width: 80px;
+  height: 3px;
   border: 0;
-  border-radius: var(--shape-full);
+  background: var(--rule);
   appearance: none;
-  background: var(--surface-container-highest);
 }
 
 .progress::-webkit-progress-bar {
-  border-radius: var(--shape-full);
-  background: var(--surface-container-highest);
+  background: var(--rule);
 }
 
 .progress::-webkit-progress-value {
-  border-radius: var(--shape-full);
-  background: var(--primary);
+  background: var(--ink);
+  transition: width var(--med) var(--ease);
 }
 
 .progress::-moz-progress-bar {
-  border-radius: var(--shape-full);
-  background: var(--primary);
+  background: var(--ink);
 }
 
 .switchMode {
-  align-self: flex-start;
-  padding: 2px 16px;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--primary);
-  cursor: pointer;
+  justify-self: start;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--ink-3);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+  text-underline-offset: 3px;
 }
 
 .switchMode:hover {
-  text-decoration: underline;
+  color: var(--ink);
+  text-decoration-color: currentColor;
 }
 
-.switchMode:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: var(--shape-xs);
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
 }

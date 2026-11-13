@@ -1,0 +1,164 @@
+.top {
+  align-items: center;
+  height: 60px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+  display: inline-block;
+  font-size: 19px;
+  font-weight: 750;
+  font-stretch: 96%;
+  line-height: 28px;
+  letter-spacing: -0.035em;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-width: 0;
+}
+
+.nav {
+  display: flex;
+  gap: 28px;
+}
+
+.item {
+  position: relative;
+  padding: 20px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: color var(--fast) var(--ease);
+}
+
+.item:hover {
+  color: var(--ink);
+}
+
+/* the page you are on is underlined in ink, on the bar's own rule */
+.item::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--med) var(--ease);
+}
+
+.item[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.item[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.docs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--ink-2);
+  transition: color var(--fast) var(--ease);
+}
+
+.docs:hover {
+  color: var(--ink);
+}
+
+.theme {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  transition:
+    color var(--fast) var(--ease),
+    background-color var(--fast) var(--ease);
+}
+
+.theme:hover {
+  background: var(--paper-sunk);
+  color: var(--ink);
+}
+
+/* ---- footer ---- */
+
+.foot {
+  margin-top: auto;
+  padding-top: 48px;
+}
+
+.footLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 16px 0 28px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-3);
+}
+
+.api {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+}
+
+.signal {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rule-2);
+}
+
+.signal[data-state="up"] {
+  background: var(--blue);
+}
+
+.signal[data-state="down"] {
+  background: var(--red);
+}
+
+@media (max-width: 760px) {
+  .top {
+    display: flex;
+    gap: 20px;
+    height: 52px;
+  }
+
+  .bar {
+    flex: 1;
+  }
+
+  .nav {
+    gap: 18px;
+  }
+
+  .item {
+    padding: 16px 0;
+  }
+
+  .docs {
+    display: none;
+  }
+}

@@ -7,30 +7,46 @@
 html {
   -webkit-text-size-adjust: 100%;
   interpolate-size: allow-keywords;
+  scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--surface);
-  color: var(--on-surface);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 20px;
-  letter-spacing: 0.1px;
   font-optical-sizing: auto;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color var(--dur-medium2) var(--ease-standard);
+  text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4, p, figure, pre, dl, dd, ul, ol {
+h1, h2, h3, h4, p, figure, pre, dl, dd, ul, ol, fieldset, legend {
   margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4 {
+  font-size: inherit;
+  font-weight: inherit;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 ul, ol {
-  padding: 0;
   list-style: none;
+}
+
+fieldset {
+  border: 0;
+  min-width: 0;
 }
 
 a {
@@ -45,38 +61,46 @@ button, input, select, textarea {
 }
 
 button {
+  padding: 0;
+  border: 0;
+  background: none;
   cursor: pointer;
 }
 
 code, pre, kbd {
   font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+b, strong {
+  font-weight: 650;
 }
 
 ::selection {
-  background: var(--marker);
-  color: var(--on-surface);
+  background: var(--blue-tint);
+  color: var(--ink);
 }
 
 :focus-visible {
-  outline: 3px solid var(--secondary);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
-  border-radius: inherit;
+  border-radius: var(--radius);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--outline-variant) transparent;
+  scrollbar-color: var(--rule-2) transparent;
 }
 
 /* icons are inline SVGs sized by font-size (1em) */
 .icon {
-  font-size: 24px;
+  font-size: 16px;
   flex-shrink: 0;
-  vertical-align: -0.125em;
+  vertical-align: -0.14em;
 }
 
 .spin {
-  animation: spin 1s linear infinite;
+  animation: spin 0.9s linear infinite;
 }
 
 @keyframes spin {
@@ -92,26 +116,22 @@ code, pre, kbd {
   white-space: nowrap;
 }
 
-/* View transitions between pages: a quick fade-through, with named elements morphing. */
+/* Moving between pages: the old one leaves quickly, the new one settles in. */
 ::view-transition-old(root) {
-  animation: 90ms var(--ease-emphasized-accelerate) both fade-out;
+  animation: 80ms var(--ease) both fade-out;
 }
 ::view-transition-new(root) {
-  animation: 210ms var(--ease-emphasized-decelerate) 90ms both fade-in-up;
-}
-::view-transition-group(*) {
-  animation-duration: var(--spring-default-spatial-duration);
-  animation-timing-function: var(--spring-default-spatial);
+  animation: 160ms var(--ease) 60ms both fade-in;
 }
 
 @keyframes fade-out {
   to { opacity: 0; }
 }
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
-}
 @keyframes fade-in {
   from { opacity: 0; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(4px); }
 }
 
 /* biome-ignore-start lint/complexity/noImportantStyles: reduced motion must win over every animation */

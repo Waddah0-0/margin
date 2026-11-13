@@ -1,38 +1,24 @@
+/* Where a run stands: a mark and a word, in the pencil colour the state calls for. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
-  padding: 0 10px 0 8px;
-  border-radius: var(--shape-full);
-  background: var(--surface-container-highest);
-  color: var(--on-surface-variant);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 20px;
   white-space: nowrap;
+  color: var(--ink);
+}
+
+.chip[data-tone="neutral"] {
+  color: var(--ink-3);
 }
 
 .chip[data-tone="active"] {
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
+  color: var(--blue);
 }
 
-.chip[data-tone="active"] :global(.icon) {
-  color: var(--primary);
-}
-
-.chip[data-tone="ok"] {
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
-}
-
-.chip[data-tone="warn"] {
-  background: var(--tertiary-container);
-  color: var(--on-tertiary-container);
-}
-
+.chip[data-tone="warn"],
 .chip[data-tone="error"] {
-  background: var(--error-container);
-  color: var(--on-error-container);
+  color: var(--red);
 }

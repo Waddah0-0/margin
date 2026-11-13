@@ -27,9 +27,23 @@ function Support({ id, field, error }: { id: string; field: Field; error?: strin
   if (!text) return null;
   return (
     <p id={id} className={styles.support} data-error={Boolean(error)}>
-      {error && <Icon name="error" size={16} />}
+      {error && <Icon name="error" size={14} />}
       {text}
     </p>
+  );
+}
+
+function Label({ children, required }: { children: ReactNode; required?: boolean }) {
+  return (
+    <span className={styles.label}>
+      {children}
+      {required && (
+        <span className={styles.required} aria-hidden="true">
+          {" "}
+          *
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -37,7 +51,7 @@ function rangeHint(field: Field): string | undefined {
   const lo = field.minimum ?? field.exclusiveMinimum;
   const hi = field.maximum ?? field.exclusiveMaximum;
   if (lo !== undefined && hi !== undefined) return `${lo}–${hi}`;
-  if (field.default !== undefined && field.default !== null) return `Default ${String(field.default)}`;
+  if (field.default !== undefined && field.default !== null) return `default ${String(field.default)}`;
   return undefined;
 }
 
@@ -46,25 +60,24 @@ export function TextField({ field, value, error, onChange, autoFocus }: FieldPro
   const numeric = field.kind === "integer" || field.kind === "number";
   const hint = numeric ? rangeHint(field) : undefined;
   return (
-    <div className={styles.group}>
-      <label className={styles.outlined} data-error={Boolean(error)} data-size={field.primary ? "l" : "m"}>
-        <input
-          className={styles.input}
-          value={String(value ?? "")}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.placeholder ?? " "}
-          inputMode={field.kind === "integer" ? "numeric" : field.kind === "number" ? "decimal" : undefined}
-          aria-invalid={Boolean(error)}
-          aria-describedby={`${id}-support`}
-          autoFocus={autoFocus}
-          spellCheck={false}
-          autoComplete="off"
-        />
-        <span className={styles.floating}>
-          {field.label}
-          {field.required && <span aria-hidden="true"> *</span>}
+    <div className={styles.group} data-width={numeric ? "short" : undefined}>
+      <label className={styles.field}>
+        <Label required={field.required}>{field.label}</Label>
+        <span className={styles.box} data-error={Boolean(error)} data-size={field.primary ? "l" : "m"}>
+          <input
+            className={styles.input}
+            value={String(value ?? "")}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            inputMode={field.kind === "integer" ? "numeric" : field.kind === "number" ? "decimal" : undefined}
+            aria-invalid={Boolean(error)}
+            aria-describedby={`${id}-support`}
+            autoFocus={autoFocus}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {hint && <span className={styles.suffix}>{hint}</span>}
         </span>
-        {hint && <span className={styles.suffix}>{hint}</span>}
       </label>
       <Support id={`${id}-support`} field={field} error={error} />
     </div>
@@ -75,18 +88,19 @@ export function JsonField({ field, value, error, onChange }: FieldProps) {
   const id = useId();
   return (
     <div className={styles.group}>
-      <label className={styles.outlined} data-error={Boolean(error)} data-multiline="true">
-        <textarea
-          className={`${styles.input} ${styles.code}`}
-          value={String(value ?? "")}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder=" "
-          rows={4}
-          aria-invalid={Boolean(error)}
-          aria-describedby={`${id}-support`}
-          spellCheck={false}
-        />
-        <span className={styles.floating}>{field.label} (JSON)</span>
+      <label className={styles.field}>
+        <Label required={field.required}>{field.label} (JSON)</Label>
+        <span className={styles.box} data-error={Boolean(error)} data-multiline="true">
+          <textarea
+            className={`${styles.input} ${styles.code}`}
+            value={String(value ?? "")}
+            onChange={(e) => onChange(e.target.value)}
+            rows={4}
+            aria-invalid={Boolean(error)}
+            aria-describedby={`${id}-support`}
+            spellCheck={false}
+          />
+        </span>
       </label>
       <Support id={`${id}-support`} field={field} error={error} />
     </div>
@@ -96,9 +110,9 @@ export function JsonField({ field, value, error, onChange }: FieldProps) {
 export function SwitchField({ field, value, onChange }: FieldProps) {
   const id = useId();
   return (
-    <div className={styles.switchRow}>
-      <div className={styles.switchText}>
-        <label htmlFor={id} className={styles.switchLabel}>
+    <div className={styles.row}>
+      <div className={styles.rowText}>
+        <label htmlFor={id} className={styles.label}>
           {field.label}
         </label>
         {field.description && <p className={styles.support}>{field.description}</p>}
@@ -129,9 +143,11 @@ export function SegmentedField({ field, value, onChange }: FieldProps) {
       : (field.options ?? []).map((o) => ({ label: o, value: o }));
   const current = value ?? (field.kind === "choice" ? String(field.default ?? "") : null);
   return (
-    <fieldset className={`${styles.switchRow} ${styles.fieldset}`}>
-      <div className={styles.switchText}>
-        <legend className={styles.switchLabel}>{field.label}</legend>
+    <div className={styles.row} role="radiogroup" aria-labelledby={`${name}-label`}>
+      <div className={styles.rowText}>
+        <span id={`${name}-label`} className={styles.label}>
+          {field.label}
+        </span>
         {field.description && <p className={styles.support}>{field.description}</p>}
       </div>
       <div className={styles.segmented}>
@@ -144,37 +160,36 @@ export function SegmentedField({ field, value, onChange }: FieldProps) {
               checked={option.value === current}
               onChange={() => onChange(option.value)}
             />
-            <span className={styles.check}>
-              <Icon name="check" size={18} />
-            </span>
-            {option.label}
+            <span>{option.label}</span>
           </label>
         ))}
       </div>
-    </fieldset>
+    </div>
   );
 }
 
 export function SelectField({ field, value, onChange }: FieldProps) {
   const id = useId();
   return (
-    <div className={styles.group}>
-      <label className={styles.outlined} data-filled="true">
-        <select
-          id={id}
-          className={styles.input}
-          value={String(value ?? field.default ?? "")}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          {field.nullable && <option value="">Default</option>}
-          {(field.options ?? []).map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-        <span className={styles.floating}>{field.label}</span>
-        <Icon name="dropdown" className={styles.dropdown} />
+    <div className={styles.group} data-width="short">
+      <label className={styles.field}>
+        <Label>{field.label}</Label>
+        <span className={styles.box}>
+          <select
+            id={id}
+            className={styles.input}
+            value={String(value ?? field.default ?? "")}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            {field.nullable && <option value="">Default</option>}
+            {(field.options ?? []).map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+          <Icon name="dropdown" size={14} className={styles.dropdown} />
+        </span>
       </label>
       <Support id={`${id}-support`} field={field} />
     </div>
@@ -207,12 +222,9 @@ export function ListField({ field, value, error, onChange }: FieldProps) {
 
   return (
     <div className={styles.group}>
-      <label
-        className={styles.outlined}
-        data-error={Boolean(error)}
-        data-filled={items.length > 0 || undefined}
-      >
-        <span className={styles.chips}>
+      <label className={styles.field}>
+        <Label required={field.required}>{field.label}</Label>
+        <span className={`${styles.box} ${styles.chips}`} data-error={Boolean(error)}>
           {items.map((item) => (
             <span key={item} className={styles.chip}>
               <span className={styles.chipText}>{item}</span>
@@ -225,7 +237,7 @@ export function ListField({ field, value, error, onChange }: FieldProps) {
                   onChange(items.filter((i) => i !== item));
                 }}
               >
-                <Icon name="close" size={16} />
+                <Icon name="close" size={12} />
               </button>
             </span>
           ))}
@@ -235,12 +247,10 @@ export function ListField({ field, value, error, onChange }: FieldProps) {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
             onBlur={() => draft && add(draft)}
-            placeholder=" "
             aria-describedby={`${id}-support`}
             spellCheck={false}
           />
         </span>
-        <span className={styles.floating}>{field.label}</span>
       </label>
       <Support
         id={`${id}-support`}
@@ -337,14 +347,14 @@ export function FileField({ field, value, error, onChange }: FieldProps) {
     upload.state === "done" ? upload : path ? { name: baseName(path), size: undefined } : undefined;
   return (
     <div className={styles.group}>
-      <span className={styles.fileLabel} id={`${id}-label`}>
-        {field.label}
-        {field.required && <span aria-hidden="true"> *</span>}
+      <span id={`${id}-label`}>
+        <Label required={field.required}>{field.label}</Label>
       </span>
       <section
         className={styles.drop}
         data-dragging={dragging || undefined}
         data-error={problem ? true : undefined}
+        data-filled={shown ? true : undefined}
         aria-labelledby={`${id}-label`}
         aria-describedby={`${id}-support`}
         onDragOver={(e) => {
@@ -369,9 +379,7 @@ export function FileField({ field, value, error, onChange }: FieldProps) {
         />
         {upload.state === "sending" ? (
           <div className={styles.sending}>
-            <span className={styles.fileName}>
-              <Icon name="spinner" size={18} /> Uploading {upload.name}
-            </span>
+            <span className={styles.fileName}>Uploading {upload.name}</span>
             <progress
               className={styles.progress}
               max={1}
@@ -384,7 +392,7 @@ export function FileField({ field, value, error, onChange }: FieldProps) {
           </div>
         ) : shown ? (
           <div className={styles.chosen}>
-            <Icon name="file" size={22} />
+            <Icon name="file" size={18} />
             <span className={styles.fileName}>{shown.name}</span>
             {shown.size !== undefined && <span className={styles.fileSize}>{fileSize(shown.size)}</span>}
             <span className={styles.fileActions}>
@@ -398,16 +406,19 @@ export function FileField({ field, value, error, onChange }: FieldProps) {
           </div>
         ) : (
           <div className={styles.empty}>
-            <Icon name="upload" size={24} />
-            <span>Drop a file here, or</span>
-            <Button variant="tonal" size="s" onClick={() => input.current?.click()}>
+            <Icon name="upload" size={18} />
+            <span>{dragging ? "Drop it here" : "Drop a file here, or"}</span>
+            <Button variant="outlined" size="s" onClick={() => input.current?.click()}>
               Choose a file
             </Button>
+            {field.accept && field.accept.length > 0 && (
+              <span className={styles.accepts}>{field.accept.join(" ")}</span>
+            )}
           </div>
         )}
       </section>
       <p id={`${id}-support`} className={styles.support} data-error={Boolean(problem)}>
-        {problem && <Icon name="error" size={16} />}
+        {problem && <Icon name="error" size={14} />}
         {problem ?? field.description}
       </p>
       <button type="button" className={styles.switchMode} onClick={() => setTyping(true)}>
@@ -461,30 +472,28 @@ export function PlainTextField({
 }) {
   const id = useId();
   return (
-    <div className={styles.group}>
-      <label
-        className={styles.outlined}
-        data-error={Boolean(error)}
-        data-filled={placeholder ? true : undefined}
-      >
-        <input
-          className={styles.input}
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? " "}
-          aria-invalid={Boolean(error)}
-          aria-describedby={`${id}-support`}
-          list={list}
-          disabled={disabled}
-          spellCheck={false}
-          autoComplete="off"
-        />
-        <span className={styles.floating}>{label}</span>
+    <div className={styles.group} data-width={type === "number" ? "short" : undefined}>
+      <label className={styles.field}>
+        <Label>{label}</Label>
+        <span className={styles.box} data-error={Boolean(error)}>
+          <input
+            className={styles.input}
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            aria-invalid={Boolean(error)}
+            aria-describedby={`${id}-support`}
+            list={list}
+            disabled={disabled}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </span>
       </label>
       {(error || support) && (
         <p id={`${id}-support`} className={styles.support} data-error={Boolean(error)}>
-          {error && <Icon name="error" size={16} />}
+          {error && <Icon name="error" size={14} />}
           {error ?? support}
         </p>
       )}

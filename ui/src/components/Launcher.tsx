@@ -1,15 +1,15 @@
 /**
- * The home page's pill-shaped launcher: pick an agent, type its main input, go. When the
- * main input is a file, choose (or drop) one instead: it is uploaded, then the run starts.
- * Agents without a main input (or anyone wanting more options) continue on the agent's page.
+ * The home page's launcher, written as a sentence: "Run <agent> on <its main input>".
+ * Pick the agent, fill the blank, press Enter. When the main input is a file, choose (or
+ * drop) one instead: it is uploaded, then the run starts. Agents without a main input, and
+ * anyone wanting more options, continue on the agent's page.
  */
 import { type DragEvent, type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { type AgentInfo, uploadFile } from "../api/client";
 import { startRun } from "../form/SchemaForm";
 import { fieldsFromSchema } from "../form/schema";
-import { AgentAvatar } from "./AgentAvatar";
-import { IconButton } from "./Button";
+import { Button } from "./Button";
 import { Icon } from "./Icon";
 import styles from "./Launcher.module.css";
 
@@ -41,6 +41,7 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
   const [text, setText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState<{ name: string; fraction: number }>();
   const [error, setError] = useState<string>();
   const menuId = useId();
@@ -53,9 +54,10 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
   const primary = agent
     ? fieldsFromSchema(agent.input_schema, agent.primary_input).find((f) => f.primary)
     : undefined;
+  const takesFile = primary?.kind === "file";
 
-  // The menu is a popover: it lives in the top layer (no clipping by the hero) and the
-  // browser closes it on Escape or a click outside. It is placed under the picker on open.
+  // The menu is a popover: it lives in the top layer and the browser closes it on Escape or
+  // a click outside. It is placed under the picker when it opens.
   useEffect(() => {
     const menu = menuRef.current;
     if (!menu) return;
@@ -64,8 +66,8 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
       setMenuOpen(open);
       const rect = pickerRef.current?.getBoundingClientRect();
       if (open && rect) {
-        menu.style.top = `${rect.bottom + 14}px`;
-        menu.style.left = `${Math.max(8, rect.left - 8)}px`;
+        menu.style.top = `${rect.bottom + 8}px`;
+        menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 408))}px`;
       }
     };
     menu.addEventListener("beforetoggle", onToggle);
@@ -102,15 +104,16 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
   };
 
   const onDrop = (e: DragEvent) => {
-    if (primary?.kind !== "file") return;
+    if (!takesFile) return;
     e.preventDefault();
+    setDragging(false);
     const file = e.dataTransfer.files[0];
     if (file && !busy) void sendFile(file);
   };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (primary?.kind === "file") {
+    if (takesFile) {
       fileRef.current?.click();
       return;
     }
@@ -127,25 +130,34 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
     await go(text.trim());
   };
 
+  const carried = primary && !takesFile && text.trim() ? { [primary.name]: text.trim() } : undefined;
+
   return (
     <div className={styles.wrap}>
       <form
-        className={styles.pill}
+        className={styles.sentence}
+        data-dragging={dragging || undefined}
         onSubmit={submit}
-        onDragOver={(e) => primary?.kind === "file" && e.preventDefault()}
+        onDragOver={(e) => {
+          if (!takesFile) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <div className={styles.picker}>
+        <span className={styles.word}>Run</span>
+        <span className={styles.picker}>
           <button
             ref={pickerRef}
             type="button"
-            className={styles.pickerButton}
+            className={styles.pick}
             popoverTarget={menuId}
             aria-haspopup="listbox"
             aria-expanded={menuOpen}
+            aria-label={`Agent: ${agent.name}`}
           >
-            <AgentAvatar id={agent.id} name={agent.name} size={32} />
-            <span className={styles.pickerName}>{agent.name}</span>
+            {agent.name}
             <Icon name="unfold" size={20} />
           </button>
           <div
@@ -171,18 +183,17 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
                   inputRef.current?.focus();
                 }}
               >
-                <AgentAvatar id={a.id} name={a.name} size={36} />
                 <span className={styles.optionText}>
-                  <span className="title-s">{a.name}</span>
-                  <span className="body-s muted">{a.description}</span>
+                  <span className={styles.optionName}>{a.name}</span>
+                  <span className={styles.optionAbout}>{a.description}</span>
                 </span>
-                {a.id === agent.id && <Icon name="check" size={20} />}
+                <Icon name="check" size={16} className={styles.optionCheck} />
               </button>
             ))}
           </div>
-        </div>
-        <span className={styles.divider} />
-        {primary?.kind === "file" ? (
+        </span>
+        {primary && <span className={styles.word}>on</span>}
+        {takesFile ? (
           <>
             <input
               ref={fileRef}
@@ -199,67 +210,53 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
             />
             <button
               type="button"
-              className={`${styles.input} ${styles.fileButton}`}
+              className={`${styles.blank} ${styles.file}`}
               onClick={() => fileRef.current?.click()}
               disabled={busy}
             >
-              {uploading ? (
-                <>
-                  Uploading {uploading.name} ({Math.round(uploading.fraction * 100)}%)
-                </>
-              ) : (
-                <>
-                  <Icon name="upload" size={20} /> Choose or drop a file
-                </>
-              )}
+              {uploading
+                ? `${uploading.name} (${Math.round(uploading.fraction * 100)}%)`
+                : dragging
+                  ? "drop it here"
+                  : "a file you choose or drop"}
             </button>
           </>
         ) : primary ? (
           <input
             ref={inputRef}
-            className={styles.input}
+            className={styles.blank}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={primary.placeholder ?? primary.description ?? primary.label}
+            placeholder={primary.placeholder ?? primary.label.toLowerCase()}
             aria-label={primary.label}
             spellCheck={false}
             autoComplete="off"
           />
-        ) : (
-          <span className={`${styles.input} ${styles.placeholder}`}>This agent has no single main input</span>
-        )}
-        <IconButton
+        ) : null}
+        <Button
           type="submit"
-          icon={busy ? "spinner" : "forward"}
-          label={primary ? "Run" : "Open"}
-          variant="filled"
+          size="l"
+          trailingIcon={busy ? "spinner" : primary ? "enter" : "forward"}
           disabled={busy}
           className={styles.go}
-        />
-      </form>
-      <div className={styles.below}>
-        <button
-          type="button"
-          className={styles.more}
-          onClick={() =>
-            navigate(`/agents/${agent.id}`, {
-              viewTransition: true,
-              state:
-                primary && primary.kind !== "file" && text.trim()
-                  ? { [primary.name]: text.trim() }
-                  : undefined,
-            })
-          }
         >
-          <Icon name="options" size={16} />
-          More options
-        </button>
-        {error && (
-          <p className={styles.error} role="alert">
-            <Icon name="error" size={16} /> {error}
-          </p>
+          {takesFile ? "Choose a file" : primary ? "Run" : "Open"}
+        </Button>
+      </form>
+      <p className={styles.below}>
+        {error ? (
+          <span className={styles.error} role="alert">
+            <Icon name="error" size={14} /> {error}
+          </span>
+        ) : (
+          <span>
+            {primary?.description ?? "This agent has no single main input. Its form has every field."}
+          </span>
         )}
-      </div>
+        <Link to={`/agents/${agent.id}`} state={carried} className="link" viewTransition>
+          More options
+        </Link>
+      </p>
     </div>
   );
 }

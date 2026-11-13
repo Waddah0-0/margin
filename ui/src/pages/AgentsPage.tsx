@@ -1,7 +1,8 @@
 import { useAgents } from "../api/hooks";
-import { AgentCard } from "../components/AgentCard";
-import { Icon } from "../components/Icon";
+import { AgentIndex } from "../components/AgentIndex";
+import { Block, ListHead } from "../components/Block";
 import { PageLoading } from "../components/Loading";
+import { PageHead } from "../components/PageHead";
 import { EmptyState, ErrorState } from "../components/States";
 import styles from "./pages.module.css";
 
@@ -11,41 +12,42 @@ export function AgentsPage() {
   const failed = Object.entries(agents.data?.load_errors ?? {});
 
   return (
-    <div className={styles.page}>
-      <header className={styles.pageHead}>
-        <h1>Agents</h1>
-        <p className="body-l muted">
-          Every agent installed alongside the API. Each one takes typed input and returns a result with its
-          evidence.
-        </p>
-      </header>
+    <>
+      <PageHead
+        title="Agents"
+        lede="Every agent installed alongside the API. Each one takes typed input and returns a result with its evidence."
+      />
 
       {agents.loading && !agents.data && <PageLoading label="Loading agents" />}
       {agents.error && <ErrorState error={agents.error} onRetry={agents.reload} />}
 
-      {failed.map(([id, reason]) => (
-        <div key={id} className={styles.loadError} role="alert">
-          <Icon name="error" />
-          <div>
-            <p className="title-s">{id} failed to load</p>
-            <p className="body-m">{reason}</p>
-          </div>
-        </div>
-      ))}
+      {failed.length > 0 && (
+        <Block label="Failed to load" count={failed.length} tone="red">
+          <ul className={styles.loadErrors} role="alert">
+            {failed.map(([id, reason]) => (
+              <li key={id}>
+                <code>{id}</code>
+                <span>{reason}</span>
+              </li>
+            ))}
+          </ul>
+        </Block>
+      )}
 
       {agents.data && list.length === 0 && (
-        <EmptyState icon="widgets" title="No agents installed">
-          <p>Agents are Python packages registered under the margin.agents entry point.</p>
+        <EmptyState title="No agents installed">
+          <p>
+            Agents are Python packages registered under the <code>margin.agents</code> entry point.
+          </p>
         </EmptyState>
       )}
 
       {list.length > 0 && (
-        <div className={styles.grid}>
-          {list.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
+        <section className={styles.section}>
+          <ListHead label="Installed" count={list.length} />
+          <AgentIndex agents={list} />
+        </section>
       )}
-    </div>
+    </>
   );
 }

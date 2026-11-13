@@ -186,10 +186,14 @@ export const SHOWN_ELSEWHERE = new Set([
   "How to read this result",
 ]);
 
-/** A colour between ink (human-like, 0) and highlighter (AI-like, 1). */
+/**
+ * A colour for a likelihood: blue pencil towards 0 (human-like), red towards 1 (AI-like),
+ * and plain grey in the middle, where the evidence says little either way.
+ */
 export function probabilityColor(p: number): string {
-  const pct = Math.round(Math.max(0, Math.min(1, p)) * 100);
-  return `color-mix(in oklab, var(--marker-strong) ${pct}%, var(--primary))`;
+  const t = Math.max(0, Math.min(1, p));
+  const strength = Math.round(Math.abs(t - 0.5) * 200);
+  return `color-mix(in oklab, var(${t >= 0.5 ? "--red" : "--blue"}) ${strength}%, var(--ink-3))`;
 }
 
 export const SIDE_LABEL: Record<Side, string> = {

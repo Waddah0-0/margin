@@ -1,8 +1,9 @@
 /**
  * Files: a tree coloured by each file's likelihood (unscored files greyed out), and the
- * selected file with its excerpt, marked lines, the model's verdict and the signals.
+ * selected file with its excerpt, the notes on its marked lines, the model's verdict and
+ * the signals.
  */
-import { type CSSProperties, Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../../components/Icon";
 import { WeightBar } from "../GenericResult";
 import styles from "./detector.module.css";
@@ -65,7 +66,7 @@ function TreeRows({
                 onClick={() => toggle(node.path)}
                 aria-expanded={isOpen}
               >
-                <Icon name="chevronRight" size={14} className={styles.treeChevron} />
+                <Icon name="chevronRight" size={11} className={styles.treeChevron} />
                 <span className={styles.treeName}>{node.name}/</span>
               </button>
               {isOpen && (
@@ -108,10 +109,6 @@ function TreeRows({
   );
 }
 
-function marksEndingAt(marks: ExcerptMark[], line: number) {
-  return marks.filter((m) => m.line_end === line);
-}
-
 function markOf(marks: ExcerptMark[], line: number): ExcerptMark | undefined {
   // "for" wins over "against" over "context" when spans overlap
   const order = { for: 0, against: 1, context: 2 } as const;
@@ -120,67 +117,138 @@ function markOf(marks: ExcerptMark[], line: number): ExcerptMark | undefined {
     .sort((a, b) => order[a.side] - order[b.side])[0];
 }
 
+/** The line a mark's note stands beside: its first line that the excerpt actually shows. */
+function anchorOf(excerpt: Excerpt, mark: ExcerptMark): number {
+  for (const hunk of excerpt.hunks) {
+    const last = hunk.start_line + hunk.lines.length - 1;
+    if (mark.line_end < hunk.start_line || mark.line_start > last) continue;
+    return Math.max(mark.line_start, hunk.start_line);
+  }
+  return mark.line_start;
+}
+
+const lineSpan = (m: ExcerptMark) =>
+  m.line_start === m.line_end ? `${m.line_start}` : `${m.line_start}–${m.line_end}`;
+
+/**
+ * The excerpt, with each mark's note in the margin beside the lines it is about. Notes are
+ * placed level with their first line, then pushed down just enough not to overlap, so the
+ * code keeps its even line spacing. On a narrow screen they become a list under the code.
+ */
 function Code({ excerpt, focusLine, focusAt }: { excerpt: Excerpt; focusLine?: number; focusAt?: number }) {
-  const focusRef = useRef<HTMLTableRowElement>(null);
+  const focusRef = useRef<HTMLTableRowElement | null>(null);
+  const rows = useRef(new Map<number, HTMLTableRowElement>());
+  const notesRef = useRef<HTMLOListElement>(null);
+  const [tops, setTops] = useState<number[]>([]);
+  const notes = useMemo(
+    () =>
+      excerpt.marks
+        .map((mark) => ({ mark, anchor: anchorOf(excerpt, mark) }))
+        .sort((a, b) => a.anchor - b.anchor),
+    [excerpt],
+  );
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll again whenever a line is picked
   useEffect(() => {
     focusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusLine, focusAt]);
 
+  useLayoutEffect(() => {
+    const list = notesRef.current;
+    if (!list) return;
+    const place = () => {
+      // on a narrow screen the notes are a plain list under the code: nothing to place
+      const first = list.children[0];
+      if (first && getComputedStyle(first).position !== "absolute") {
+        list.style.minHeight = "";
+        return;
+      }
+      const origin = list.getBoundingClientRect().top;
+      let floor = 0;
+      const next = notes.map(({ anchor }, i) => {
+        const row = rows.current.get(anchor);
+        const want = row ? row.getBoundingClientRect().top - origin : floor;
+        const top = Math.max(want, floor);
+        floor = top + ((list.children[i] as HTMLElement | undefined)?.offsetHeight ?? 0) + 8;
+        return Math.round(top);
+      });
+      list.style.minHeight = `${Math.round(floor)}px`;
+      setTops((prev) => (prev.length === next.length && prev.every((t, i) => t === next[i]) ? prev : next));
+    };
+    place();
+    if (typeof ResizeObserver === "undefined") return;
+    const watch = new ResizeObserver(place);
+    watch.observe(list);
+    return () => watch.disconnect();
+  }, [notes]);
+
   return (
     <div className={styles.code}>
-      <table>
-        <tbody>
-          {excerpt.hunks.map((hunk, h) => {
-            const previousEnd =
-              h > 0 ? (excerpt.hunks[h - 1]?.start_line ?? 0) + (excerpt.hunks[h - 1]?.lines.length ?? 0) : 1;
-            const gap = hunk.start_line - previousEnd;
-            return (
-              <Fragment key={hunk.start_line}>
-                {gap > 0 && (
-                  <tr className={styles.gap}>
-                    <td colSpan={2}>
-                      {h === 0 ? `lines 1–${hunk.start_line - 1}` : `${gap} line${gap === 1 ? "" : "s"}`} not
-                      shown
-                    </td>
-                  </tr>
-                )}
-                {hunk.lines.map((text, i) => {
-                  const line = hunk.start_line + i;
-                  const mark = markOf(excerpt.marks, line);
-                  const notes = marksEndingAt(excerpt.marks, line);
-                  return (
-                    <Fragment key={line}>
+      <div className={styles.codeScroll}>
+        <table>
+          <tbody>
+            {excerpt.hunks.map((hunk, h) => {
+              const previousEnd =
+                h > 0
+                  ? (excerpt.hunks[h - 1]?.start_line ?? 0) + (excerpt.hunks[h - 1]?.lines.length ?? 0)
+                  : 1;
+              const gap = hunk.start_line - previousEnd;
+              return (
+                <Fragment key={hunk.start_line}>
+                  {gap > 0 && (
+                    <tr className={styles.gap}>
+                      <td colSpan={2}>
+                        {h === 0 ? `lines 1–${hunk.start_line - 1}` : `${gap} line${gap === 1 ? "" : "s"}`}{" "}
+                        not shown
+                      </td>
+                    </tr>
+                  )}
+                  {hunk.lines.map((text, i) => {
+                    const line = hunk.start_line + i;
+                    const mark = markOf(excerpt.marks, line);
+                    return (
                       <tr
-                        ref={line === focusLine ? focusRef : undefined}
+                        key={line}
+                        ref={(el) => {
+                          if (el) rows.current.set(line, el);
+                          else rows.current.delete(line);
+                          if (line === focusLine) focusRef.current = el;
+                        }}
                         data-side={mark?.side}
                         data-focus={line === focusLine || undefined}
                       >
                         <td className={styles.lineNo}>{line}</td>
                         <td className={styles.lineText}>{text || " "}</td>
                       </tr>
-                      {notes.map((m) => (
-                        <tr key={`${m.source}-${m.line_start}-${m.note}`} className={styles.noteRow}>
-                          <td />
-                          <td>
-                            <span className={styles.note} data-side={m.side}>
-                              <b>{SIDE_LABEL[m.side]}</b>
-                              <span className={styles.noteSource}>
-                                {m.source === "judge" ? "model" : m.source}
-                              </span>
-                              {m.note}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </Fragment>
-                  );
-                })}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                    );
+                  })}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {notes.length > 0 && (
+        <ol ref={notesRef} className={styles.notes} aria-label="Notes on the marked lines">
+          {notes.map(({ mark }, i) => (
+            <li
+              key={`${mark.source}-${mark.line_start}-${mark.note}`}
+              className={styles.note}
+              data-side={mark.side}
+              style={{ top: tops[i] ?? 0 }}
+            >
+              <span className={styles.noteHead}>
+                <b>{SIDE_LABEL[mark.side]}</b>
+                <span>
+                  {mark.source === "judge" ? "model" : mark.source.replaceAll("_", " ")} · line{" "}
+                  {lineSpan(mark)}
+                </span>
+              </span>
+              <span className={styles.noteText}>{mark.note}</span>
+            </li>
+          ))}
+        </ol>
+      )}
       {excerpt.truncated && (
         <p className={styles.truncated}>Some marked lines were left out to keep the report small.</p>
       )}
@@ -198,12 +266,13 @@ function FileView({
   selection: Selection | null;
 }) {
   const focusLine = selection?.path === file.path ? selection.line : undefined;
+  const score = fileScore(file);
   return (
     <article className={styles.fileView}>
       <header className={styles.fileHead}>
         <div className={styles.filePath}>
           <code>{file.path}</code>
-          <span className="body-s muted">
+          <span className={styles.fileMeta}>
             {file.language ?? "unknown language"} · {file.lines} lines of code
             {file.is_test ? " · test file" : ""}
           </span>
@@ -211,18 +280,17 @@ function FileView({
         <span className={styles.fileScores}>
           <span
             className={styles.fileScore}
-            style={{ "--c": probabilityColor(fileScore(file).value) } as CSSProperties}
+            style={{ "--c": probabilityColor(score.value) } as CSSProperties}
           >
-            {fileScore(file).value.toFixed(2)}
+            {score.value.toFixed(2)}
           </span>
-          <span className="body-s muted">{file.judge ? "the model's verdict" : "signals only"}</span>
-          {file.judge && <span className="body-s muted">signals {file.probability.toFixed(2)}</span>}
+          <span className={styles.fileMeta}>{file.judge ? "the model's verdict" : "signals only"}</span>
+          {file.judge && <span className={styles.fileMeta}>signals {file.probability.toFixed(2)}</span>}
         </span>
       </header>
 
       {file.ai_commit_touches > 0 && (
         <p className={styles.touch}>
-          <Icon name="checkCircle" size={16} />
           Changed by {file.ai_commit_touches} commit{file.ai_commit_touches === 1 ? "" : "s"} whose metadata
           names an AI tool.
         </p>
@@ -231,10 +299,10 @@ function FileView({
       {file.judge && (
         <div className={styles.verdict}>
           <div>
-            <p className="label-m muted">The model read this file</p>
-            <p className="title-m">
+            <p className={styles.verdictLabel}>The model read this file</p>
+            <p className={styles.verdictLine}>
               Likelihood {file.judge.likelihood_ai.toFixed(2)}
-              <span className="body-m muted"> · its confidence {file.judge.confidence.toFixed(2)}</span>
+              <span> · its confidence {file.judge.confidence.toFixed(2)}</span>
             </p>
           </div>
           {file.judge.uncertainty_notes && (
@@ -253,7 +321,7 @@ function FileView({
 
       {file.signals.length > 0 && (
         <div className={styles.signals}>
-          <p className="label-m muted">Signals that fired (+ reads AI-like, − reads human-like)</p>
+          <p className={styles.signalsLabel}>Signals that fired (+ reads AI-like, − reads human-like)</p>
           <ul>
             {file.signals.map((s) => (
               <li key={`${s.signal_id}-${s.explanation}`}>
@@ -327,7 +395,7 @@ export function FilesExplorer({
   );
 
   if (!data.files.length) {
-    return <p className="body-m muted">No file could be scored.</p>;
+    return <p className="muted">No file could be scored.</p>;
   }
 
   return (
@@ -335,7 +403,7 @@ export function FilesExplorer({
       <div className={styles.treePane}>
         <div className={styles.treeTools}>
           <label className={styles.search}>
-            <Icon name="search" size={16} />
+            <Icon name="search" size={14} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -353,6 +421,7 @@ export function FilesExplorer({
             {order === "tree" && (
               <button
                 type="button"
+                className={styles.unscoredToggle}
                 aria-pressed={showUnscored}
                 onClick={() => setShowUnscored(!showUnscored)}
               >
@@ -393,14 +462,27 @@ export function FilesExplorer({
           )}
         </div>
         <p className={styles.legend}>
-          <Dot p={0} /> human-like <Dot p={1} /> AI-like <Dot p={0.5} byModel={false} /> signals only
-          <Dot p={null} /> not scored <span className={styles.treeFlag} /> marked lines
+          <span>
+            <Dot p={0} /> human-like
+          </span>
+          <span>
+            <Dot p={1} /> AI-like
+          </span>
+          <span>
+            <Dot p={0.5} byModel={false} /> signals only
+          </span>
+          <span>
+            <Dot p={null} /> not scored
+          </span>
+          <span>
+            <span className={styles.treeFlag} /> marked lines
+          </span>
         </p>
       </div>
       {file ? (
         <FileView file={file} excerpt={excerpts.get(file.path)} selection={selection} />
       ) : (
-        <p className="body-m muted">Pick a file.</p>
+        <p className="muted">Pick a file.</p>
       )}
     </div>
   );

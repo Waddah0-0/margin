@@ -3,8 +3,8 @@
 //
 //   npm run fetch:fonts
 //
-// Fraunces (display), Instrument Sans (interface) and JetBrains Mono (code and evidence),
-// Latin subsets. All three are under the SIL Open Font License.
+// Archivo (the interface), Newsreader (what agents write) and JetBrains Mono (code and
+// evidence), Latin subsets. All three are under the SIL Open Font License.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -16,15 +16,11 @@ const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
 const FAMILIES = [
+  { name: "archivo", query: "family=Archivo:wdth,wght@62..125,100..900", ofl: "archivo" },
   {
-    name: "fraunces",
-    query: "family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1",
-    ofl: "fraunces",
-  },
-  {
-    name: "instrument-sans",
-    query: "family=Instrument+Sans:wdth,wght@75..100,400..700",
-    ofl: "instrumentsans",
+    name: "newsreader",
+    query: "family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800",
+    ofl: "newsreader",
   },
   { name: "jetbrains-mono", query: "family=JetBrains+Mono:wght@300..700", ofl: "jetbrainsmono" },
 ];
@@ -47,11 +43,14 @@ for (const family of FAMILIES) {
   for (const [, subset, face] of faces) {
     if (!SUBSETS.includes(subset)) continue;
     const url = face.match(/url\((https:[^)]+)\)/)[1];
-    const file = `${family.name}-${subset}.woff2`;
+    const italic = /font-style:\s*italic/.test(face) ? "-italic" : "";
+    const file = `${family.name}${italic}-${subset}.woff2`;
     const data = Buffer.from(await (await fetch(url, { headers: { "user-agent": UA } })).arrayBuffer());
     writeFileSync(`${OUT_DIR}/${file}`, data);
     const size = Math.round(data.length / 1024);
-    blocks.push(`/* ${family.name} ${subset} (${size} KB) */\n${face.replace(url, `/fonts/${file}`)}`);
+    blocks.push(
+      `/* ${family.name}${italic} ${subset} (${size} KB) */\n${face.replace(url, `/fonts/${file}`)}`,
+    );
     n++;
   }
   console.log(`${family.name}: ${n} file(s)`);

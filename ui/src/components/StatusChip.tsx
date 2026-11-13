@@ -24,7 +24,7 @@ export function runLook(run: RunView): Look {
     default:
       if (run.result?.status === "error") return { tone: "error", icon: "error", label: "Failed" };
       if (run.result?.status === "partial") return { tone: "warn", icon: "warning", label: "Partial" };
-      return { tone: "ok", icon: "checkCircle", label: "Done" };
+      return { tone: "ok", icon: "check", label: "Done" };
   }
 }
 
@@ -32,7 +32,7 @@ export function StatusChip({ run }: { run: RunView }) {
   const look = runLook(run);
   return (
     <span className={styles.chip} data-tone={look.tone}>
-      <Icon name={look.icon} size={16} fill={look.tone === "ok"} />
+      <Icon name={look.icon} size={14} />
       {look.label}
     </span>
   );

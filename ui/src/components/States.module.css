@@ -1,77 +1,49 @@
 .empty {
-  --badge-bg: var(--surface-container-high);
-  --badge-fg: var(--on-surface-variant);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 72px 24px;
-  text-align: center;
-  animation: rise var(--dur-long2) var(--ease-emphasized-decelerate) both;
-}
-
-.empty[data-tone="error"] {
-  --badge-bg: var(--error-container);
-  --badge-fg: var(--on-error-container);
-}
-
-/* a small sheet of paper, slightly tilted, with a highlighter stroke under the icon */
-.badge {
-  position: relative;
   display: grid;
-  place-items: center;
-  width: 84px;
-  height: 84px;
-  margin-bottom: 12px;
-  border-radius: 26px;
-  background: var(--badge-bg);
-  color: var(--badge-fg);
-  rotate: -5deg;
-  isolation: isolate;
-  animation: tilt-in var(--spring-slow-spatial-duration) var(--spring-slow-spatial) both;
+  gap: 10px;
+  justify-items: start;
+  max-width: 560px;
+  padding: 18px 0 8px;
+  animation: rise var(--med) var(--ease) both;
 }
 
-.badge::after {
-  content: "";
-  position: absolute;
-  left: 22px;
-  right: 18px;
-  bottom: 22px;
-  height: 10px;
-  z-index: -1;
-  border-radius: 3px 6px 4px 7px;
-  background: var(--marker);
-  rotate: 3deg;
+.title {
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 32px;
+  letter-spacing: -0.02em;
 }
 
 .body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.action {
+  margin-top: 10px;
 }
 
 .command {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 4px 4px 16px;
-  border-radius: var(--shape-full);
-  background: var(--surface-container-high);
-  color: var(--on-surface);
-  font-size: 14px;
+  gap: 12px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  color: var(--ink);
+  justify-self: start;
 }
 
-.action {
-  margin-top: 12px;
+.command code {
+  font-size: 13px;
 }
 
-@keyframes rise {
-  from { opacity: 0; transform: translateY(12px); }
-}
-
-@keyframes tilt-in {
-  from { rotate: 8deg; scale: 0.8; }
+.command code::before {
+  content: "$ ";
+  color: var(--ink-3);
 }

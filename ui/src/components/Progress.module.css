@@ -1,0 +1,73 @@
+.ruler {
+  position: relative;
+  height: 20px;
+  overflow: hidden;
+}
+
+/* minor ticks every 2%, major every 10%, standing on the baseline */
+.ticks {
+  position: absolute;
+  inset: 0 0 3px;
+  border-right: 1px solid var(--ink-3);
+  background:
+    repeating-linear-gradient(90deg, var(--ink-3) 0 1px, transparent 1px 10%) bottom / 100% 9px no-repeat,
+    repeating-linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px 2%) bottom / 100% 4px no-repeat;
+}
+
+.ruler::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--rule);
+}
+
+.fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: var(--pct);
+  height: 3px;
+  background: var(--ink);
+  transition: width 500ms var(--ease);
+}
+
+.needle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--pct);
+  z-index: 2;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--blue);
+  opacity: 0;
+  transition:
+    left 500ms var(--ease),
+    opacity var(--med) var(--ease);
+}
+
+.ruler[data-active="true"]:not([data-indeterminate="true"]) .needle {
+  opacity: 1;
+}
+
+.ruler[data-active="false"] .fill {
+  background: var(--ink-3);
+}
+
+.ruler[data-active="false"][aria-valuenow="100"] .fill {
+  background: var(--ink);
+}
+
+.ruler[data-indeterminate="true"][data-active="true"] .fill {
+  width: 16%;
+  animation: travel 1.6s var(--ease) infinite alternate;
+}
+
+@keyframes travel {
+  from { left: 0; }
+  to { left: 84%; }
+}

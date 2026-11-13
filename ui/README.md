@@ -4,7 +4,8 @@ A web page for running margin agents. It talks only to the HTTP API: pick an age
 in a form generated from its input schema, watch the run live, and read the result with all
 its evidence.
 
-It is designed as a lab notebook: warm paper, ink, and a highlighter that marks the evidence.
+Every page is ruled like a sheet of paper: notes hang in the margin, content sits beside them,
+and red and blue pencil mark what was flagged and what was checked.
 [DESIGN.md](DESIGN.md) explains the choices.
 
 ## Running it
@@ -33,7 +34,7 @@ VITE_API_URL=http://127.0.0.1:9000 npm run dev
 
 | Page | What it does |
 |---|---|
-| Home | The library's front page: a card for every installed agent, a launcher (pick an agent, paste its main input, run; it remembers the last agent used), and recent runs. |
+| Home | The launcher, written as a sentence ("Run *agent* on *its main input*"; it remembers the last agent used), an index of every installed agent, and recent runs. |
 | Agents | Every installed agent, plus any that failed to load and why. |
 | Agent | The input form, generated from the agent's JSON schema: the main input first, other fields under "More options". It also shows the same run as a `margin run` command. An agent can add its own intro beside the form (`agentIntroFor` in `src/results/registry.ts`); the AI Code Detector's explains how it reads code. |
 | Run | Live progress over server-sent events: stage, percentage, queue position. You can cancel from here. When the agent asks a question, the run waits and a form shows the questions, the evidence behind them and the suggested answers; it carries on once you answer. When the run finishes, the result appears below. |
@@ -67,9 +68,8 @@ Generated files (do not edit by hand):
 | File | Regenerate with | When |
 |---|---|---|
 | `src/api/schema.d.ts` | `npm run gen:api` | The API changed (`ui/openapi.json` is updated by `scripts/export_openapi.py`) |
-| `src/styles/theme.css` | `npm run gen:theme` | To change the palette or the springs |
 | `src/styles/fonts.css`, `public/fonts/` | `npm run fetch:fonts` | To change or update the fonts |
 
-The fonts are bundled, so the UI works offline: Fraunces, Instrument Sans and JetBrains
+The fonts are bundled, so the UI works offline: Archivo, Newsreader and JetBrains
 Mono, all under the SIL Open Font License (texts in `public/fonts/`). Icons are Phosphor
 (MIT), and only the ones listed in `src/components/icons.ts` end up in the bundle.

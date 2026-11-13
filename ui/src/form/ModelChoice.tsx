@@ -33,12 +33,9 @@ export function ModelChoice({
 
   if (!data) {
     return (
-      <div className={styles.box}>
-        <Icon name="model" size={20} />
-        <span className="body-m muted">
-          {settings.error ? "Model settings unavailable." : "Loading model…"}
-        </span>
-      </div>
+      <p className={styles.line}>
+        <span className="muted">{settings.error ? "Model settings unavailable." : "Loading model…"}</span>
+      </p>
     );
   }
 
@@ -48,16 +45,19 @@ export function ModelChoice({
 
   return (
     <div className={styles.box} data-open={open}>
-      <div className={styles.line}>
-        <Icon name={provider?.on_device ? "device" : "cloud"} size={20} />
+      <p className={styles.line}>
+        <Icon name={provider?.on_device ? "device" : "cloud"} size={16} />
         <span className={styles.summary}>
-          {value ? "This run uses" : "Runs with"} <b>{PROVIDER_NAME[chosen.provider]}</b>
+          {value ? "This run uses" : "Runs with"} <b>{PROVIDER_NAME[chosen.provider]}</b>{" "}
           <code>{chosen.model || provider?.default_model}</code>
         </span>
-        <button type="button" className={styles.toggle} onClick={() => setOpen(!open)} aria-expanded={open}>
+        <button type="button" className="link" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? "Use the default" : "Change for this run"}
         </button>
-      </div>
+        <Link to="/settings" className="link" viewTransition>
+          Model settings
+        </Link>
+      </p>
 
       {open && (
         <div className={styles.editor}>
@@ -76,7 +76,7 @@ export function ModelChoice({
                   onClick={() => onChange({ provider: p.id, model: p.model })}
                 >
                   {PROVIDER_NAME[p.id]}
-                  {!usable && <Icon name="key" size={14} />}
+                  {!usable && <Icon name="key" size={12} />}
                 </button>
               );
             })}
@@ -89,14 +89,11 @@ export function ModelChoice({
           />
           {provider && !provider.on_device && (
             <p className={styles.note}>
-              <Icon name="cloud" size={16} /> This sends the agent's prompts to {PROVIDER_NAME[provider.id]}.
+              <Icon name="cloud" size={14} /> This sends the agent's prompts to {PROVIDER_NAME[provider.id]}.
             </p>
           )}
         </div>
       )}
-      <Link to="/settings" className={styles.settingsLink} viewTransition>
-        <Icon name="settings" size={14} /> Model settings
-      </Link>
     </div>
   );
 }

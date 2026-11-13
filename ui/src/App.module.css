@@ -1,16 +1,25 @@
+/* The sheet: a page-wide column with the ruled margin line running down it, top to bottom. */
 .shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: var(--page-max);
   min-height: 100dvh;
+  margin-inline: auto;
+  padding-inline: var(--page-pad);
+}
+
+.shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--line-x);
+  width: 1px;
+  background: var(--margin-line);
+  pointer-events: none;
 }
 
 .main {
-  margin-left: var(--rail-width);
-  padding-top: 16px;
   min-width: 0;
-}
-
-@media (max-width: 720px) {
-  .main {
-    margin-left: 0;
-    padding-top: 8px;
-  }
 }

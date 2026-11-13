@@ -7,7 +7,6 @@
       "*.ts",
       "*.json",
       "!src/api/schema.d.ts",
-      "!src/styles/theme.css",
       "!src/styles/fonts.css",
       "!openapi.json",
       "!package-lock.json"

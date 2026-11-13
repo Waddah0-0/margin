@@ -1,228 +1,201 @@
 .wrap {
-  position: relative;
-  width: 100%;
-  max-width: 760px;
+  display: grid;
+  gap: 14px;
 }
 
-.pill {
-  position: relative;
+/* a sentence with two blanks: the words are quiet, what you fill in is ink */
+.sentence {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 64px;
-  padding: 0 8px 0 6px;
-  border-radius: var(--shape-full);
-  background: var(--surface-container-lowest);
-  box-shadow: var(--elev-1), inset 0 0 0 1px var(--outline-variant);
-  transition: box-shadow var(--dur-medium2) var(--ease-standard);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+  font-size: 34px;
+  font-stretch: 96%;
+  line-height: 52px;
+  letter-spacing: -0.028em;
 }
 
-:global([data-theme="dark"]) .pill {
-  background: var(--surface-container-high);
-}
-
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme="light"])) .pill {
-    background: var(--surface-container-high);
-  }
-}
-
-/* focus: a soft highlighter halo instead of a glow */
-.pill:focus-within {
-  box-shadow: var(--elev-2), inset 0 0 0 1.5px var(--primary), 0 0 0 5px var(--marker);
+.word {
+  font-weight: 400;
+  color: var(--ink-3);
 }
 
 .picker {
-  position: relative;
+  display: inline-flex;
 }
 
-.pickerButton {
-  display: flex;
+.pick {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  height: 52px;
-  padding: 0 12px 0 10px;
+  gap: 6px;
+  box-shadow: 0 2px 0 var(--ink);
+  font-weight: 700;
+  line-height: 46px;
+  color: var(--ink);
+  white-space: nowrap;
+  transition: box-shadow var(--fast) var(--ease);
+}
+
+.pick:hover,
+.pick[aria-expanded="true"] {
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.pick :global(.icon) {
+  color: var(--ink-3);
+}
+
+.blank {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 0;
   border: 0;
-  border-radius: var(--shape-full);
-  background: transparent;
-  color: var(--on-surface);
-  transition: background-color var(--dur-short4) var(--ease-standard),
-    border-radius var(--spring-fast-spatial-duration) var(--spring-fast-spatial);
-}
-
-.pickerButton:hover,
-.pickerButton[aria-expanded="true"] {
-  background: color-mix(in srgb, var(--on-surface) 7%, transparent);
-}
-
-.pickerButton:active {
-  border-radius: var(--shape-lg);
-}
-
-.pickerButton :global(.icon) {
-  color: var(--on-surface-variant);
-}
-
-.pickerName {
-  font-size: 15px;
+  border-radius: 0;
+  background: none;
+  box-shadow: 0 2px 0 var(--rule-2);
   font-weight: 500;
+  line-height: 46px;
+  color: var(--ink);
+  text-align: left;
+  transition: box-shadow var(--fast) var(--ease);
+}
+
+.blank::placeholder {
+  font-weight: 400;
+  color: var(--ink-3);
+  opacity: 0.75;
+}
+
+.blank:hover {
+  box-shadow: 0 2px 0 var(--ink-3);
+}
+
+.blank:focus {
+  outline: none;
+  box-shadow: 0 2px 0 var(--ink);
+}
+
+.file {
+  overflow: hidden;
+  font-weight: 400;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.divider {
-  width: 1px;
-  height: 28px;
-  margin: 0 6px;
-  background: var(--outline-variant);
+.file:focus-visible {
+  box-shadow: 0 2px 0 var(--blue);
 }
 
-.input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 17px;
-  letter-spacing: 0.2px;
-  color: var(--on-surface);
+.sentence[data-dragging] .file {
+  box-shadow: 0 2px 0 var(--blue);
+  color: var(--blue);
 }
 
-.input::placeholder,
-.placeholder {
-  color: var(--on-surface-variant);
-  opacity: 0.85;
-}
-
-.placeholder {
-  display: flex;
-  align-items: center;
-}
-
-.pill .go {
-  width: 48px;
-  height: 48px;
-}
-
-.menu {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  width: min(420px, calc(100vw - 16px));
-  padding: 8px;
-  border: 0;
-  border-radius: var(--shape-lg);
-  background: var(--surface-container);
-  color: var(--on-surface);
-  box-shadow: var(--elev-3);
-  transform-origin: top left;
-}
-
-.menu:popover-open {
-  animation: menu-in var(--spring-fast-spatial-duration) var(--spring-fast-spatial);
-}
-
-.option {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: var(--shape-md);
-  background: transparent;
-  color: var(--on-surface);
-  text-align: left;
-}
-
-.option:hover {
-  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
-}
-
-.option[aria-selected="true"] {
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
-}
-
-.optionText {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.optionText .body-s,
-.optionText > :last-child {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.go {
+  align-self: center;
+  letter-spacing: 0;
+  font-stretch: 100%;
 }
 
 .below {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 10px 0 0 18px;
-}
-
-.more {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  margin-left: -10px;
-  border: 0;
-  border-radius: var(--shape-full);
-  background: transparent;
-  color: var(--on-surface-variant);
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: baseline;
   font-size: 13px;
-  font-weight: 600;
+  line-height: 20px;
+  color: var(--ink-3);
 }
 
-.more:hover {
-  background: color-mix(in srgb, var(--on-surface) 7%, transparent);
-  color: var(--on-surface);
+.below > :first-child {
+  max-width: 640px;
+}
+
+.below :global(.link) {
+  color: var(--ink-2);
+  white-space: nowrap;
 }
 
 .error {
+  color: var(--red);
+}
+
+/* ---- the agent menu ---- */
+
+.menu {
+  position: fixed;
+  inset: auto;
+  width: min(400px, calc(100vw - 16px));
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.menu:popover-open {
+  animation: rise var(--fast) var(--ease) both;
+}
+
+.option {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--error);
-}
-
-@keyframes menu-in {
-  from { opacity: 0; transform: scale(0.92) translateY(-6px); }
-}
-
-@media (max-width: 720px) {
-  .pickerName {
-    display: none;
-  }
-  .pill {
-    height: 60px;
-  }
-}
-
-/* a file to choose: the whole input area is the button */
-.fileButton {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0;
-  font: inherit;
-  font-size: 17px;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 1px;
   text-align: left;
-  color: var(--on-surface-variant);
-  cursor: pointer;
 }
 
-.fileButton:hover:not(:disabled) {
-  color: var(--on-surface);
+.option:hover,
+.option:focus-visible {
+  background: var(--paper-sunk);
 }
 
-.fileButton:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 4px;
-  border-radius: var(--shape-sm);
+.optionText {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+
+.optionName {
+  font-weight: 650;
+}
+
+.optionAbout {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--ink-2);
+}
+
+.optionCheck {
+  margin-top: 3px;
+  visibility: hidden;
+}
+
+.option[aria-selected="true"] .optionCheck {
+  visibility: visible;
+}
+
+@media (max-width: 760px) {
+  .sentence {
+    font-size: 26px;
+    line-height: 42px;
+  }
+
+  .pick,
+  .blank {
+    line-height: 38px;
+  }
+
+  .blank {
+    flex-basis: 100%;
+  }
 }

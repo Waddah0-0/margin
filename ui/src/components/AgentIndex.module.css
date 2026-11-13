@@ -1,0 +1,126 @@
+.row {
+  color: inherit;
+}
+
+.no {
+  display: block;
+  padding-top: 21px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 28px;
+  color: var(--ink-3);
+  transition: color var(--fast) var(--ease);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px 20px;
+  gap: 32px;
+  align-items: start;
+  /* the row reaches 12px past the text so its hover fill has room, but the hairline between
+     rows stays in line with the text and the rules around it */
+  margin-inline: -12px;
+  padding: 20px 12px 22px;
+  background-image: linear-gradient(var(--rule), var(--rule));
+  background-position: 12px 0;
+  background-size: calc(100% - 24px) 1px;
+  background-repeat: no-repeat;
+  transition: background-color var(--fast) var(--ease);
+}
+
+.list > li:first-child .body {
+  background-image: none;
+}
+
+.row:hover .body {
+  background: var(--paper-sunk);
+}
+
+.row:hover .no {
+  color: var(--ink);
+}
+
+.text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+}
+
+.description {
+  max-width: 560px;
+  font-size: 14.5px;
+  line-height: 21px;
+  color: var(--ink-2);
+}
+
+.spec {
+  display: grid;
+  gap: 1px;
+  padding-top: 5px;
+  font-size: 12.5px;
+  line-height: 19px;
+  color: var(--ink-3);
+}
+
+.spec > :first-child {
+  color: var(--ink-2);
+}
+
+.arrow {
+  margin-top: 5px;
+  color: var(--ink);
+  opacity: 0;
+  translate: -6px 0;
+  transition:
+    opacity var(--fast) var(--ease),
+    translate var(--med) var(--ease);
+}
+
+.row:hover .arrow,
+.row:focus-visible .arrow {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .spec {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    padding-top: 0;
+  }
+
+  .arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .no {
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    line-height: 18px;
+  }
+
+  .list > li:first-child .no {
+    border-top: 0;
+  }
+
+  .body {
+    margin-inline: 0;
+    padding: 0 0 16px;
+    background-image: none;
+  }
+}

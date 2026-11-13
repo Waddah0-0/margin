@@ -1,5 +1,6 @@
 import { type FormEvent, useId, useState } from "react";
 import { api, call, type Question, type QuestionBatch } from "../api/client";
+import { Block } from "../components/Block";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { EvidenceRow } from "../results/GenericResult";
@@ -81,8 +82,8 @@ function QuestionField({
 
   return (
     <fieldset className={styles.question} aria-describedby={error ? `${name}-error` : undefined}>
-      <legend className={`title-m ${styles.prompt}`}>{question.prompt}</legend>
-      {question.detail && <p className="body-m muted">{question.detail}</p>}
+      <legend className={styles.prompt}>{question.prompt}</legend>
+      {question.detail && <p className={styles.detail}>{question.detail}</p>}
       {evidence.length > 0 && (
         <ul className={`${resultStyles.evidenceList} ${styles.evidence}`}>
           {evidence.map((ev, i) => (
@@ -93,7 +94,11 @@ function QuestionField({
       )}
 
       {kind === "text" ? (
-        <label className={fieldStyles.outlined} data-error={Boolean(error)} data-multiline="true">
+        <label
+          className={`${fieldStyles.box} ${styles.textAnswer}`}
+          data-error={Boolean(error)}
+          data-multiline="true"
+        >
           <textarea
             className={fieldStyles.input}
             aria-label={question.prompt}
@@ -131,9 +136,9 @@ function QuestionField({
                 <span className={styles.optionText}>
                   <span className={styles.optionLabel}>
                     {choice.label}
-                    {suggested(choice.value) && <span className={styles.suggested}>Suggested</span>}
+                    {suggested(choice.value) && <span className="tag">Suggested</span>}
                   </span>
-                  {choice.detail && <span className="body-m muted">{choice.detail}</span>}
+                  {choice.detail && <span className={styles.optionDetail}>{choice.detail}</span>}
                 </span>
               </label>
             );
@@ -163,7 +168,7 @@ function QuestionField({
       )}
       {error && (
         <p id={`${name}-error`} className={fieldStyles.support} data-error="true">
-          <Icon name="error" size={16} />
+          <Icon name="error" size={14} />
           {error}
         </p>
       )}
@@ -210,44 +215,43 @@ export function QuestionForm({ runId, batch }: { runId: string; batch: QuestionB
   };
 
   return (
-    <form className={styles.card} onSubmit={submit} aria-labelledby="questions-title">
-      <div className={styles.head}>
-        <p className={`label-l ${styles.eyebrow}`}>
-          <Icon name="question" size={18} />
-          The agent is asking
-        </p>
-        <h2 id="questions-title" className="headline-s">
+    <form className={styles.form} onSubmit={submit} aria-labelledby="questions-title">
+      <Block label="The agent is asking" tone="red" level={0} note="The run waits until you answer.">
+        <h2 id="questions-title" className={styles.title}>
           {batch.title}
         </h2>
-        {batch.detail && <p className="body-m muted">{batch.detail}</p>}
-      </div>
+        {batch.detail && <p className={styles.lede}>{batch.detail}</p>}
+      </Block>
 
       {sections(batch.questions).map(([section, questions]) => (
-        <div key={section ?? "_"} className={styles.section}>
-          {section && <h3 className={styles.sectionTitle}>{section}</h3>}
-          {questions.map((q) => (
-            <QuestionField
-              key={q.id}
-              question={q}
-              draft={drafts[q.id] ?? draftFor(q)}
-              error={errors[q.id]}
-              onChange={(draft) => setDrafts((d) => ({ ...d, [q.id]: draft }))}
-            />
-          ))}
-        </div>
+        <Block key={section ?? "_"} label={section ?? undefined} level={3} rule={Boolean(section)}>
+          <div className={styles.questions}>
+            {questions.map((q) => (
+              <QuestionField
+                key={q.id}
+                question={q}
+                draft={drafts[q.id] ?? draftFor(q)}
+                error={errors[q.id]}
+                onChange={(draft) => setDrafts((d) => ({ ...d, [q.id]: draft }))}
+              />
+            ))}
+          </div>
+        </Block>
       ))}
 
-      <div className={styles.actions}>
-        <Button type="submit" icon="forward" disabled={sending}>
-          {sending ? "Sending" : "Continue"}
-        </Button>
-        <span className="body-m muted">Your answers are kept with the result.</span>
-        {failure && (
-          <span className="body-m" role="alert" style={{ color: "var(--error)" }}>
-            {failure}
-          </span>
-        )}
-      </div>
+      <Block>
+        <div className={styles.actions}>
+          <Button type="submit" size="l" trailingIcon="forward" disabled={sending}>
+            {sending ? "Sending" : "Continue"}
+          </Button>
+          <span className={styles.kept}>Your answers are kept with the result.</span>
+          {failure && (
+            <span className={styles.failure} role="alert">
+              {failure}
+            </span>
+          )}
+        </div>
+      </Block>
     </form>
   );
 }

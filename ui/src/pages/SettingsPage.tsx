@@ -18,12 +18,13 @@ import {
   saveLLMSettings,
   testConnection,
 } from "../api/settings";
+import { Block } from "../components/Block";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { PageLoading } from "../components/Loading";
+import { PageHead } from "../components/PageHead";
 import { ErrorState } from "../components/States";
 import { PlainTextField } from "../form/Fields";
-import pageStyles from "./pages.module.css";
 import styles from "./SettingsPage.module.css";
 
 /** The host part of a local server address, so presets can keep it (e.g. in Docker). */
@@ -97,7 +98,8 @@ function changes(settings: LLMSettings, draft: Draft): LLMSettingsUpdate {
   return update;
 }
 
-function ProviderCard({
+/** One provider as a line of the list: its name, the model it would use, where prompts go. */
+function ProviderRow({
   provider,
   selected,
   inUse,
@@ -110,12 +112,8 @@ function ProviderCard({
 }) {
   const ready = !provider.needs_key || provider.key_set;
   return (
-    <button type="button" className={styles.providerCard} aria-pressed={selected} onClick={onSelect}>
-      <span className={styles.providerHead}>
-        <Icon name={provider.on_device ? "device" : "cloud"} size={22} duotone={selected} />
-        <span className="title-m">{PROVIDER_NAME[provider.id]}</span>
-        {inUse && <span className={styles.inUse}>In use</span>}
-      </span>
+    <button type="button" className={styles.provider} aria-pressed={selected} onClick={onSelect}>
+      <span className={styles.providerName}>{PROVIDER_NAME[provider.id]}</span>
       <code className={styles.providerModel}>{provider.model}</code>
       <span className={styles.providerNote} data-warn={!ready}>
         {provider.on_device
@@ -123,6 +121,13 @@ function ProviderCard({
           : ready
             ? `Key ${provider.key_hint}`
             : "Needs an API key"}
+      </span>
+      <span className={styles.providerUse}>
+        {inUse && (
+          <span className="tag" data-tone="ink">
+            In use
+          </span>
+        )}
       </span>
     </button>
   );
@@ -166,7 +171,7 @@ function ModelPicker({
   return (
     <div className={styles.modelPicker}>
       <PlainTextField
-        label="Model"
+        label="Model name"
         value={value}
         onChange={onChange}
         list={listId}
@@ -220,11 +225,7 @@ export function SettingsPage() {
 
   if (loaded.loading && !settings) return <PageLoading label="Loading settings" />;
   if (loaded.error || !settings || !draft) {
-    return (
-      <div className={pageStyles.page}>
-        {loaded.error && <ErrorState error={loaded.error} onRetry={loaded.reload} />}
-      </div>
-    );
+    return loaded.error ? <ErrorState error={loaded.error} onRetry={loaded.reload} /> : null;
   }
 
   const provider = settings.providers.find((p) => p.id === focus) as ProviderSettings;
@@ -266,20 +267,20 @@ export function SettingsPage() {
   };
 
   return (
-    <div className={pageStyles.page}>
-      <header className={pageStyles.pageHead}>
-        <h1>Settings</h1>
-        <p className="body-l muted">
-          The model margin's agents use. Saved on this computer and used from the next run on.
-        </p>
-      </header>
+    <>
+      <PageHead
+        title="Settings"
+        lede="The model margin's agents use. Saved on this computer and used from the next run on."
+      />
 
-      <section className={styles.panel}>
-        <h2 className={styles.panelTitle}>Model</h2>
+      <Block
+        label="Provider"
+        note={`Runs use ${PROVIDER_NAME[draft.provider]}. Pick a line to set that provider up.`}
+      >
         <fieldset className={styles.providers}>
           <legend className="visually-hidden">Provider</legend>
           {settings.providers.map((p) => (
-            <ProviderCard
+            <ProviderRow
               key={p.id}
               provider={{ ...p, model: draft.models[p.id] || p.model }}
               selected={focus === p.id}
@@ -295,23 +296,16 @@ export function SettingsPage() {
 
         {!provider.on_device && (
           <p className={styles.privacy}>
-            <Icon name="cloud" size={18} />
-            <span>
-              With {PROVIDER_NAME[provider.id]}, agents send their prompts to {PROVIDER_NAME[provider.id]}.
-              For the AI Code Detector that means samples of the code it reads. A local server keeps
-              everything on this computer.
-            </span>
+            With {PROVIDER_NAME[provider.id]}, agents send their prompts to {PROVIDER_NAME[provider.id]}. For
+            the AI Code Detector that means samples of the code it reads. A local server keeps everything on
+            this computer.
           </p>
         )}
 
         {draft.provider !== provider.id && (
           <div className={styles.useRow}>
-            <span className="body-m muted">
-              Runs use {PROVIDER_NAME[draft.provider]}. You can set up {PROVIDER_NAME[provider.id]} without
-              switching.
-            </span>
             <Button
-              variant="tonal"
+              variant="outlined"
               size="s"
               icon="check"
               disabled={provider.needs_key && !provider.key_set && !draft.keys[provider.id]}
@@ -319,69 +313,76 @@ export function SettingsPage() {
             >
               Use {PROVIDER_NAME[provider.id]} for all runs
             </Button>
+            <span>You can set up {PROVIDER_NAME[provider.id]} without switching.</span>
           </div>
         )}
+      </Block>
 
-        <div className={styles.details}>
-          {provider.id === "local" && (
-            <>
-              <fieldset className={styles.presets}>
-                <legend className="visually-hidden">Local server</legend>
-                {LOCAL_SERVERS.map((s) => {
-                  // keep the host the address already uses: inside Docker that is the
-                  // host machine (host.docker.internal), not the container's own localhost
-                  const url = s.url.replace("localhost", presetHost(draft.localUrl));
-                  return (
-                    <button
-                      key={s.name}
-                      type="button"
-                      className={styles.preset}
-                      aria-pressed={draft.localUrl.replace(/\/$/, "") === url}
-                      onClick={() => set({ localUrl: url })}
-                    >
-                      {s.name}
-                      <span>{s.url.replace("http://localhost", "")}</span>
-                    </button>
-                  );
-                })}
-              </fieldset>
-              <PlainTextField
-                label="Server address"
-                type="url"
-                value={draft.localUrl}
-                onChange={(v) => set({ localUrl: v })}
-                support="Any server with an OpenAI-compatible API."
-              />
-              <SourceNote source={settings.local_base_url_source} what="The address" />
-            </>
-          )}
+      {provider.id === "local" && (
+        <Block label="Server" note="Any server with an OpenAI-compatible API">
+          <div className={styles.stack}>
+            <fieldset className={styles.presets}>
+              <legend className="visually-hidden">Local server</legend>
+              {LOCAL_SERVERS.map((s) => {
+                // keep the host the address already uses: inside Docker that is the
+                // host machine (host.docker.internal), not the container's own localhost
+                const url = s.url.replace("localhost", presetHost(draft.localUrl));
+                return (
+                  <button
+                    key={s.name}
+                    type="button"
+                    className={styles.preset}
+                    aria-pressed={draft.localUrl.replace(/\/$/, "") === url}
+                    onClick={() => set({ localUrl: url })}
+                  >
+                    {s.name}
+                    <span>{s.url.replace("http://localhost", "")}</span>
+                  </button>
+                );
+              })}
+            </fieldset>
+            <PlainTextField
+              label="Server address"
+              type="url"
+              value={draft.localUrl}
+              onChange={(v) => set({ localUrl: v })}
+            />
+            <SourceNote source={settings.local_base_url_source} what="The address" />
+          </div>
+        </Block>
+      )}
 
-          {(provider.needs_key || provider.id === "local") && (
-            <div className={styles.keyRow}>
-              <PlainTextField
-                label={provider.id === "local" ? "API key (only if your server needs one)" : "API key"}
-                type="password"
-                value={draft.keys[provider.id] ?? ""}
-                onChange={(v) => set({ keys: { ...draft.keys, [provider.id]: v } })}
-                placeholder={
-                  provider.key_set ? `Saved key ${provider.key_hint} · type to replace` : undefined
-                }
-                support="Kept on this computer. It is never shown again, only its last four characters."
-              />
-              {provider.key_set && provider.key_source === "saved" && (
-                <Button
-                  variant="text"
-                  size="s"
-                  icon="close"
-                  onClick={() => set({ keys: { ...draft.keys, [provider.id]: "" } })}
-                >
-                  Remove saved key
-                </Button>
-              )}
-              <SourceNote source={provider.key_source} what="The key" />
-            </div>
-          )}
+      {(provider.needs_key || provider.id === "local") && (
+        <Block
+          label="API key"
+          note={provider.id === "local" ? "Only if your server needs one" : "Never shown again once saved"}
+        >
+          <div className={styles.stack}>
+            <PlainTextField
+              label={`${PROVIDER_NAME[provider.id]} key`}
+              type="password"
+              value={draft.keys[provider.id] ?? ""}
+              onChange={(v) => set({ keys: { ...draft.keys, [provider.id]: v } })}
+              placeholder={provider.key_set ? `Saved key ${provider.key_hint} · type to replace` : undefined}
+              support="Kept on this computer. It is never shown again, only its last four characters."
+            />
+            {provider.key_set && provider.key_source === "saved" && (
+              <Button
+                variant="text"
+                size="s"
+                icon="close"
+                onClick={() => set({ keys: { ...draft.keys, [provider.id]: "" } })}
+              >
+                Remove saved key
+              </Button>
+            )}
+            <SourceNote source={provider.key_source} what="The key" />
+          </div>
+        </Block>
+      )}
 
+      <Block label="Model">
+        <div className={styles.stack}>
           <ModelPicker
             provider={provider}
             value={draft.models[provider.id] ?? ""}
@@ -389,18 +390,22 @@ export function SettingsPage() {
             localUrl={settings.local_base_url}
           />
           <SourceNote source={provider.model_source} what="The model" />
-
-          {!provider.on_device && (
-            <PlainTextField
-              label="Spending limit per run (USD)"
-              type="number"
-              value={draft.maxCost}
-              onChange={(v) => set({ maxCost: v })}
-              support="A run stops calling the model once its estimated cost reaches this."
-            />
-          )}
         </div>
+      </Block>
 
+      {!provider.on_device && (
+        <Block label="Spending limit" note="Per run, in US dollars">
+          <PlainTextField
+            label="Limit (USD)"
+            type="number"
+            value={draft.maxCost}
+            onChange={(v) => set({ maxCost: v })}
+            support="A run stops calling the model once its estimated cost reaches this."
+          />
+        </Block>
+      )}
+
+      <Block note={settings.settings_file ? <span>Saved in {settings.settings_file}</span> : undefined}>
         <div className={styles.actions}>
           <Button
             icon={saving ? "spinner" : "check"}
@@ -410,7 +415,7 @@ export function SettingsPage() {
             {saving ? "Saving" : "Save"}
           </Button>
           <Button
-            variant="tonal"
+            variant="outlined"
             icon={check === "running" ? "spinner" : "test"}
             onClick={runCheck}
             disabled={check === "running"}
@@ -419,19 +424,19 @@ export function SettingsPage() {
           </Button>
           {saved && !dirty && (
             <span className={styles.ok}>
-              <Icon name="checkCircle" size={18} fill /> Saved
+              <Icon name="check" size={14} /> Saved
             </span>
           )}
-          {dirty && !saving && <span className="body-m muted">Unsaved changes</span>}
+          {dirty && !saving && <span className={styles.unsaved}>Unsaved changes</span>}
         </div>
         {saveError && (
           <p className={styles.result} data-ok="false" role="alert">
-            <Icon name="error" size={18} /> {saveError}
+            <Icon name="error" size={16} /> {saveError}
           </p>
         )}
         {check && check !== "running" && (
           <p className={styles.result} data-ok={check.ok} role="status">
-            <Icon name={check.ok ? "checkCircle" : "error"} size={18} fill={check.ok} />
+            <Icon name={check.ok ? "check" : "error"} size={16} />
             <span>
               <b>
                 {check.ok ? `${check.model} works` : `${check.model || PROVIDER_NAME[focus]} did not answer`}
@@ -448,8 +453,7 @@ export function SettingsPage() {
             <Icon name="lock" size={14} /> Saving is turned off on this server (MARGIN_CONFIG_FILE is empty).
           </p>
         )}
-        {settings.settings_file && <p className={styles.file}>Saved in {settings.settings_file}</p>}
-      </section>
-    </div>
+      </Block>
+    </>
   );
 }

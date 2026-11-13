@@ -7,9 +7,9 @@ import {
   type RunView,
   runFileUrl,
 } from "../api/client";
+import { Block } from "../components/Block";
 import { AnchorButton, Button } from "../components/Button";
 import { Icon } from "../components/Icon";
-import type { IconName } from "../components/icons";
 import { download, duration, fileSize } from "../lib/format";
 import styles from "./GenericResult.module.css";
 import { JsonTree } from "./JsonTree";
@@ -18,7 +18,7 @@ import type { ResultViewProps } from "./registry";
 
 /*
  * The generic viewer is built from pieces that custom views reuse: the status banner, the
- * export buttons, finding cards, warnings, run details and the raw JSON.
+ * export buttons, finding rows, warnings, run details and the raw JSON.
  */
 
 function ScoreMeter({ value }: { value: number }) {
@@ -35,7 +35,10 @@ function ScoreMeter({ value }: { value: number }) {
   );
 }
 
-/** A weight in [-1, 1] as a bar growing left (against) or right (for) from the centre. */
+/**
+ * A weight in [-1, 1] as a bar growing from the centre: right and red when it counts for,
+ * left and blue when it counts against.
+ */
 export function WeightBar({ weight }: { weight: number }) {
   const clamped = Math.max(-1, Math.min(1, weight));
   return (
@@ -71,10 +74,10 @@ export function FindingCard({ finding, open }: { finding: Finding; open: boolean
   const evidence = finding.evidence ?? [];
   return (
     <details className={styles.finding} open={open || undefined}>
-      <summary className={styles.findingHead}>
+      <summary className={styles.findingHead} data-static={evidence.length === 0 || undefined}>
         <div className={styles.findingTitle}>
-          <h3 className="title-m">{finding.title}</h3>
-          <p className="body-m muted">{finding.summary}</p>
+          <h3>{finding.title}</h3>
+          <p>{finding.summary}</p>
         </div>
         {finding.severity_or_score !== null && finding.severity_or_score !== undefined && (
           <ScoreMeter value={finding.severity_or_score} />
@@ -82,7 +85,7 @@ export function FindingCard({ finding, open }: { finding: Finding; open: boolean
         {evidence.length > 0 && (
           <span className={styles.evidenceCount}>
             {evidence.length} {evidence.length === 1 ? "piece" : "pieces"} of evidence
-            <Icon name="expand" className={styles.chevron} />
+            <Icon name="chevronRight" size={12} className={styles.chevron} />
           </span>
         )}
       </summary>
@@ -100,24 +103,21 @@ export function FindingCard({ finding, open }: { finding: Finding; open: boolean
 
 const BANNER = {
   partial: {
-    icon: "warning",
     title: "Partial result",
     text: "Some of the work was skipped. The warnings below say what.",
   },
-  error: { icon: "error", title: "The run failed", text: "" },
+  error: { title: "The run failed", text: "" },
 } as const;
 
 export function StatusBanner({ result }: { result: AgentResult }) {
   if (result.status === "ok") return null;
   const banner = BANNER[result.status];
   return (
-    <div className={styles.banner} data-status={result.status} role="status">
-      <Icon name={banner.icon} />
-      <div>
-        <p className="title-m">{banner.title}</p>
-        <p className="body-m">{result.status === "error" ? result.error : banner.text}</p>
-      </div>
-    </div>
+    <Block label={banner.title} tone="red">
+      <p className={styles.banner} data-status={result.status} role="status">
+        {result.status === "error" ? result.error : banner.text}
+      </p>
+    </Block>
   );
 }
 
@@ -129,7 +129,7 @@ export function ExportButtons({ run, result }: { run: RunView; result: AgentResu
       {(run.files ?? []).map((f) => (
         <AnchorButton
           key={f.name}
-          variant="filled"
+          variant="outlined"
           size="s"
           icon="download"
           href={runFileUrl(run.run_id, f.name)}
@@ -167,27 +167,22 @@ export function ExportButtons({ run, result }: { run: RunView; result: AgentResu
   );
 }
 
+/** A part of a result: its title in the margin, its content beside it. */
 export function Section({
   title,
   count,
+  note,
   children,
-  aside,
 }: {
   title: string;
   count?: number;
+  note?: ReactNode;
   children: ReactNode;
-  aside?: ReactNode;
 }) {
   return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeadRow}>
-        <h2 className={styles.sectionTitle}>
-          {title} {count !== undefined && <span className={styles.badge}>{count}</span>}
-        </h2>
-        {aside}
-      </div>
+    <Block label={title} count={count} note={note}>
       {children}
-    </section>
+    </Block>
   );
 }
 
@@ -207,10 +202,7 @@ export function WarningList({ warnings }: { warnings: string[] }) {
     <ul className={styles.warnings}>
       {warnings.map((w, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list that never reorders
-        <li key={`${i}-${w}`}>
-          <Icon name="info" size={20} />
-          <span>{w}</span>
-        </li>
+        <li key={`${i}-${w}`}>{w}</li>
       ))}
     </ul>
   );
@@ -219,23 +211,25 @@ export function WarningList({ warnings }: { warnings: string[] }) {
 export function RunDetails({ result }: { result: AgentResult }) {
   const meta = result.metadata;
   const usage = meta?.usage;
-  const details: [IconName, string, string][] = [];
+  const details: [string, string][] = [];
   if (meta?.duration_s !== null && meta?.duration_s !== undefined)
-    details.push(["timer", "Duration", duration(meta.duration_s)]);
-  if (meta?.model) details.push(["model", "Model", meta.model]);
+    details.push(["Duration", duration(meta.duration_s)]);
+  if (meta?.model) details.push(["Model", meta.model]);
   if (usage?.llm_calls) {
-    details.push(["modelCalls", "Model calls", String(usage.llm_calls)]);
-    details.push(["tokens", "Tokens in / out", `${usage.input_tokens} / ${usage.output_tokens}`]);
-    if (usage.cost_usd) details.push(["cost", "Estimated cost", `$${usage.cost_usd.toFixed(4)}`]);
+    details.push(["Model calls", String(usage.llm_calls)]);
+    details.push([
+      "Tokens in / out",
+      `${usage.input_tokens.toLocaleString("en-US")} / ${usage.output_tokens.toLocaleString("en-US")}`,
+    ]);
+    if (usage.cost_usd) details.push(["Estimated cost", `$${usage.cost_usd.toFixed(4)}`]);
   }
-  details.push(["package", "Agent version", result.agent_version]);
+  details.push(["Agent version", result.agent_version]);
   return (
     <dl className={styles.details}>
-      {details.map(([icon, label, value]) => (
+      {details.map(([label, value]) => (
         <div key={label} className={styles.detail}>
-          <Icon name={icon} className={styles.detailIcon} />
-          <dt className="body-s muted">{label}</dt>
-          <dd className="title-m">{value}</dd>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
         </div>
       ))}
     </dl>
@@ -244,19 +238,17 @@ export function RunDetails({ result }: { result: AgentResult }) {
 
 export function RawResult({ result }: { result: AgentResult }) {
   return (
-    <section className={styles.section}>
+    <Block label="Raw result" note="Everything the agent returned, as JSON">
       <details className={styles.raw}>
         <summary className={styles.rawHead}>
-          <Icon name="code" />
-          <span className="title-m">Raw result</span>
-          <span className="body-m muted">Everything the agent returned, as JSON</span>
-          <Icon name="expand" className={styles.chevron} />
+          <Icon name="chevronRight" size={14} className={styles.chevron} />
+          <span>Show the JSON</span>
         </summary>
         <div className={styles.rawBody}>
           <JsonTree value={result} openDepth={1} />
         </div>
       </details>
-    </section>
+    </Block>
   );
 }
 
@@ -272,10 +264,12 @@ export function AnswerList({ answers }: { answers: Answer[] }) {
     <ul className={styles.answers}>
       {answers.map((a) => (
         <li key={a.question_id} className={styles.answer}>
-          <span className="body-m muted">{a.prompt}</span>
-          <span className="title-m">{a.label}</span>
-          <span className={styles.answeredBy} data-source={a.source}>
-            {ANSWERED_BY[a.source]}
+          <span className={styles.asked}>{a.prompt}</span>
+          <span className={styles.answered}>
+            {a.label}{" "}
+            <span className={`tag ${styles.by}`} data-tone={a.source === "default" ? "red" : undefined}>
+              {ANSWERED_BY[a.source]}
+            </span>
           </span>
         </li>
       ))}
@@ -295,7 +289,7 @@ export function ResultFooter({ result }: { result: AgentResult }) {
         </Section>
       )}
       {answers.length > 0 && (
-        <Section title="Answers" count={answers.length}>
+        <Section title="Answers" count={answers.length} note="What the agent asked, and who answered">
           <AnswerList answers={answers} />
         </Section>
       )}
@@ -317,11 +311,10 @@ export function GenericResult({ run, result }: ResultViewProps) {
   return (
     <ResultLayout>
       <StatusBanner result={result} />
-      <section className={styles.summary}>
-        <p className="label-l muted">Summary</p>
-        <p className={`headline-s ${styles.summaryText}`}>{result.summary}</p>
+      <Block label="Summary">
+        <p className={styles.summaryText}>{result.summary}</p>
         <ExportButtons run={run} result={result} />
-      </section>
+      </Block>
       {findings.length > 0 && (
         <Section title="Findings" count={findings.length}>
           <FindingList findings={findings} />

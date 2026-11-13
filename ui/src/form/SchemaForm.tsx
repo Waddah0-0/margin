@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { type AgentInfo, ApiError, api, call } from "../api/client";
+import { Block } from "../components/Block";
 import { Button } from "../components/Button";
 import { CopyButton } from "../components/CopyButton";
 import { Icon } from "../components/Icon";
@@ -76,69 +77,79 @@ export function SchemaForm({ agent, initial }: { agent: AgentInfo; initial?: For
   };
 
   return (
-    <form className={styles.form} onSubmit={submit} noValidate>
-      <div className={styles.fields}>
-        {main.map((field, i) => (
-          <FieldInput
-            key={field.name}
-            field={field}
-            value={values[field.name] ?? null}
-            error={shownErrors[field.name]}
-            onChange={set(field.name)}
-            autoFocus={i === 0}
-          />
-        ))}
-      </div>
-
-      {extra.length > 0 && (
-        <details className={styles.more} open={changedExtra > 0 || undefined}>
-          <summary className={styles.summary}>
-            <Icon name="options" />
-            <span>More options</span>
-            <span className={styles.count}>
-              {changedExtra ? `${changedExtra} changed` : `${extra.length}`}
-            </span>
-            <Icon name="expand" className={styles.chevron} />
-          </summary>
+    <form onSubmit={submit} noValidate>
+      {main.length > 0 && (
+        <Block label="Input">
           <div className={styles.fields}>
-            {extra.map((field) => (
+            {main.map((field, i) => (
               <FieldInput
                 key={field.name}
                 field={field}
                 value={values[field.name] ?? null}
                 error={shownErrors[field.name]}
                 onChange={set(field.name)}
+                autoFocus={i === 0}
               />
             ))}
           </div>
-        </details>
+        </Block>
       )}
 
-      {agent.uses_llm && <ModelChoice value={runModel} onChange={chooseModel} />}
+      {extra.length > 0 && (
+        <Block
+          label="Options"
+          count={extra.length}
+          note={changedExtra ? `${changedExtra} changed` : "All at their defaults"}
+        >
+          <details className={styles.more} open={changedExtra > 0 || undefined}>
+            <summary className={styles.summary}>
+              <Icon name="chevronRight" size={14} className={styles.chevron} />
+              <span>More options</span>
+            </summary>
+            <div className={`${styles.fields} ${styles.extra}`}>
+              {extra.map((field) => (
+                <FieldInput
+                  key={field.name}
+                  field={field}
+                  value={values[field.name] ?? null}
+                  error={shownErrors[field.name]}
+                  onChange={set(field.name)}
+                />
+              ))}
+            </div>
+          </details>
+        </Block>
+      )}
 
-      {serverError && (
-        <div className={styles.error} role="alert">
-          <Icon name="error" />
-          <span>{serverError}</span>
+      {agent.uses_llm && (
+        <Block label="Model">
+          <ModelChoice value={runModel} onChange={chooseModel} />
+        </Block>
+      )}
+
+      <Block>
+        {serverError && (
+          <p className={styles.error} role="alert">
+            <Icon name="error" size={16} />
+            <span>{serverError}</span>
+          </p>
+        )}
+        <div className={styles.actions}>
+          <Button type="submit" size="l" icon={submitting ? "spinner" : "play"} disabled={submitting}>
+            {submitting ? "Starting" : "Run"}
+          </Button>
+          <Button variant="text" onClick={reset} disabled={submitting}>
+            Reset
+          </Button>
         </div>
-      )}
+      </Block>
 
-      <div className={styles.actions}>
-        <Button type="submit" size="l" icon={submitting ? "spinner" : "play"} disabled={submitting}>
-          {submitting ? "Starting" : "Run"}
-        </Button>
-        <Button variant="text" onClick={reset} disabled={submitting}>
-          Reset
-        </Button>
-      </div>
-
-      <div className={styles.cli}>
-        <div className={styles.cliHead}>
-          <span className="label-m muted">Same run from the command line</span>
+      <Block label="Command line" note="The same run, from a terminal">
+        <div className={styles.cli}>
+          <code className={styles.cliCode}>{command}</code>
           <CopyButton text={command} label="Copy command" />
         </div>
-        <code className={styles.cliCode}>{command}</code>
-      </div>
+      </Block>
     </form>
   );
 }

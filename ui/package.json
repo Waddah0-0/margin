@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts",
-    "gen:theme": "node scripts/gen-theme.mjs",
     "fetch:fonts": "node scripts/fetch-fonts.mjs"
   },
   "dependencies": {
@@ -22,7 +21,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
-    "@material/material-color-utilities": "^0.4.0",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/react": "^19.3.0",

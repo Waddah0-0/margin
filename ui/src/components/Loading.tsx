@@ -1,24 +1,22 @@
 /**
- * The loading indicator: three lines of a page, highlighted one after another, over and over,
- * like someone skimming for the part that matters.
+ * The loading indicator: a short stroke drawn again and again along a hairline, like a
+ * pencil running under a line while reading it.
  */
+import { Block } from "./Block";
 import styles from "./Loading.module.css";
 
-export function LoadingIndicator({ size = 48, label = "Loading" }: { size?: number; label?: string }) {
-  return (
-    <span className={styles.wrap} role="progressbar" aria-label={label} style={{ width: size, height: size }}>
-      <span className={styles.line} style={{ width: "72%" }} />
-      <span className={styles.line} style={{ width: "54%" }} />
-      <span className={styles.line} style={{ width: "64%" }} />
-    </span>
-  );
+export function LoadingIndicator({ width = 120, label = "Loading" }: { width?: number; label?: string }) {
+  return <span className={styles.line} role="progressbar" aria-label={label} style={{ width }} />;
 }
 
-/** A whole-page loading state, centred. */
-export function PageLoading({ label }: { label?: string }) {
+/** A whole-page loading state: the label where the page's first line will be. */
+export function PageLoading({ label = "Loading" }: { label?: string }) {
   return (
-    <div className={styles.page}>
-      <LoadingIndicator size={56} label={label} />
-    </div>
+    <Block rule={false}>
+      <p className={styles.page}>
+        {label}
+        <LoadingIndicator label={label} />
+      </p>
+    </Block>
   );
 }

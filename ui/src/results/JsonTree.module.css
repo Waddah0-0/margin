@@ -1,35 +1,31 @@
 .tree {
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 22px;
-  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 20px;
 }
 
 .row {
-  padding-left: 22px;
-  white-space: pre-wrap;
+  padding-left: 18px;
   overflow-wrap: anywhere;
 }
 
 .toggle {
   display: flex;
-  align-items: center;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
+  align-items: baseline;
+  width: 100%;
   text-align: left;
-  border-radius: var(--shape-xs);
+  border-radius: var(--radius);
 }
 
 .toggle:hover {
-  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+  background: var(--paper-sunk);
 }
 
 .chevron {
-  width: 22px;
-  color: var(--on-surface-variant);
-  transition: rotate var(--spring-fast-spatial-duration) var(--spring-fast-spatial);
+  width: 18px;
+  align-self: center;
+  color: var(--ink-3);
+  transition: rotate var(--fast) var(--ease);
 }
 
 .toggle[aria-expanded="true"] .chevron {
@@ -37,41 +33,51 @@
 }
 
 .children {
-  margin-left: 10px;
+  margin-left: 8px;
   padding-left: 10px;
-  border-left: 1px solid var(--outline-variant);
+  border-left: 1px solid var(--rule);
 }
 
-.children > .punct {
-  margin-left: -10px;
+.key {
+  color: var(--ink);
+  font-weight: 500;
 }
 
-.key { color: var(--primary); }
-.string { color: var(--tertiary); }
-.number { color: var(--secondary); font-weight: 500; }
-.boolean, .null { color: var(--on-surface-variant); font-style: italic; }
-.punct { color: var(--on-surface-variant); }
+.punct,
+.size {
+  color: var(--ink-3);
+}
 
 .size {
-  margin: 0 6px;
-  padding: 0 8px;
-  border-radius: var(--shape-full);
-  background: var(--surface-container-highest);
-  color: var(--on-surface-variant);
-  font-family: var(--font-sans);
-  font-size: 11px;
-  line-height: 18px;
+  padding: 0 6px;
+  font-size: 11.5px;
+}
+
+.string {
+  color: var(--ink-2);
+}
+
+.number,
+.boolean {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.null {
+  color: var(--ink-3);
+  font-style: italic;
 }
 
 .more {
-  display: block;
-  margin: 2px 0 2px 22px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--shape-full);
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
+  margin: 2px 0 2px 18px;
   font-family: var(--font-sans);
-  font-size: 12px;
-  line-height: 24px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+  text-underline-offset: 3px;
+}
+
+.more:hover {
+  color: var(--ink);
 }

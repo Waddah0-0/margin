@@ -1,79 +1,63 @@
+import { Link } from "react-router";
 import { useAgents, useRuns } from "../api/hooks";
-import { AgentCard } from "../components/AgentCard";
-import { AgentDeck } from "../components/AgentDeck";
-import { LinkButton } from "../components/Button";
+import { AgentIndex } from "../components/AgentIndex";
+import { Block, ListHead } from "../components/Block";
 import { Launcher } from "../components/Launcher";
 import { LoadingIndicator } from "../components/Loading";
 import { RunList } from "../components/RunList";
-import { ErrorState } from "../components/States";
+import { EmptyState, ErrorState } from "../components/States";
 import styles from "./pages.module.css";
 
 export function HomePage() {
   const agents = useAgents();
-  const runs = useRuns(5);
+  const runs = useRuns(6);
   const list = agents.data?.agents ?? [];
+  const loading = agents.loading && !agents.data;
 
   return (
-    <div className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroText}>
-          {list.length > 0 && (
-            <span className={styles.eyebrow}>
-              <b>{list.length}</b>
-              {list.length === 1 ? "agent installed" : "agents installed"}
-            </span>
-          )}
-          <h1 className={styles.headline}>
-            Agents that <span className="marker">show their work</span>
-          </h1>
-          <p className={styles.lede}>
-            A library of small, focused agents. Give one a job and it answers with findings, each with the
-            evidence behind it, so you can check its work instead of taking its word.
+    <>
+      {(loading || list.length > 0) && (
+        <Block rule={false} level={1} label="New run" className={styles.launch}>
+          <p className={styles.pitch}>
+            Small agents that show their work. Every finding comes with the evidence behind it, so you can
+            check it instead of taking its word.
           </p>
-          <div className={styles.launcherSlot}>
-            {agents.loading && !agents.data ? (
-              <div className={styles.skeletonPill}>
-                <LoadingIndicator size={36} label="Loading agents" />
-              </div>
-            ) : list.length > 0 ? (
-              <Launcher agents={list} />
-            ) : null}
-          </div>
-        </div>
-        <div className={styles.heroArt}>
-          <AgentDeck agents={list} />
-        </div>
-      </section>
+          {loading ? <LoadingIndicator label="Loading agents" /> : <Launcher agents={list} />}
+        </Block>
+      )}
 
       {agents.error && <ErrorState error={agents.error} onRetry={agents.reload} />}
 
+      {agents.data && list.length === 0 && (
+        <EmptyState title="No agents installed">
+          <p>
+            Agents are Python packages registered under the <code>margin.agents</code> entry point. Install
+            one alongside the API and it shows up here.
+          </p>
+        </EmptyState>
+      )}
+
       {list.length > 0 && (
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2>Agents</h2>
-            <LinkButton variant="text" to="/agents" trailingIcon="forward" viewTransition>
+          <ListHead label="Agents" count={list.length}>
+            <Link to="/agents" className="link" viewTransition>
               All agents
-            </LinkButton>
-          </div>
-          <div className={styles.grid}>
-            {list.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
+            </Link>
+          </ListHead>
+          <AgentIndex agents={list} />
         </section>
       )}
 
       {runs.data && runs.data.length > 0 && (
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2>Recent runs</h2>
-            <LinkButton variant="text" to="/runs" trailingIcon="forward" viewTransition>
+          <ListHead label="Recent runs">
+            <Link to="/runs" className="link" viewTransition>
               All runs
-            </LinkButton>
-          </div>
+            </Link>
+          </ListHead>
           <RunList runs={runs.data} agents={list} />
         </section>
       )}
-    </div>
+    </>
   );
 }

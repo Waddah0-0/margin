@@ -1,113 +1,128 @@
-/* Type, shape, motion and elevation tokens. Colours are generated into theme.css. */
+/* Type, layout and motion tokens. Colours are in theme.css. */
 
 :root {
-  /* Fraunces for display and headings (soft, a little wonky: a notebook, not a dashboard);
-     Instrument Sans for the interface; JetBrains Mono for code and evidence */
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --font-sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* three voices: the interface speaks in Archivo, agents in Newsreader, evidence in mono */
+  --font-sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
 
-  /* shape scale */
-  --shape-xs: 4px;
-  --shape-sm: 8px;
-  --shape-md: 12px;
-  --shape-lg: 16px;
-  --shape-lg-plus: 20px;
-  --shape-xl: 28px;
-  --shape-xl-plus: 32px;
-  --shape-2xl: 48px;
-  --shape-full: 999px;
+  /* the page: a margin, the ruled line, then the text */
+  --page-max: 1440px;
+  --page-pad: 32px;
+  --margin-w: 196px;
+  --gutter: 28px;
+  --line-x: calc(var(--page-pad) + var(--margin-w) + var(--gutter));
+  --measure: 660px;
 
-  /* durations and easings */
-  --dur-short1: 50ms;
-  --dur-short2: 100ms;
-  --dur-short3: 150ms;
-  --dur-short4: 200ms;
-  --dur-medium1: 250ms;
-  --dur-medium2: 300ms;
-  --dur-medium4: 400ms;
-  --dur-long2: 500ms;
-  --dur-long4: 600ms;
-  --dur-xlong2: 800ms;
-  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
-  --ease-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --radius: 2px;
+  --control-h: 36px;
 
-  /* elevation: used sparingly, surfaces carry depth by tone; shadows are warm, like paper */
-  --elev-1: 0 1px 2px rgb(60 40 10 / 0.1), 0 1px 3px 1px rgb(60 40 10 / 0.05);
-  --elev-2: 0 1px 2px rgb(60 40 10 / 0.1), 0 3px 8px 2px rgb(60 40 10 / 0.07);
-  --elev-3: 0 6px 14px 4px rgb(60 40 10 / 0.08), 0 1px 3px rgb(60 40 10 / 0.12);
-
-  /* state layer opacities */
-  --state-hover: 0.08;
-  --state-focus: 0.1;
-  --state-pressed: 0.1;
-
-  /* notebook paper: the dot grid behind hero panels */
-  --paper-dot: color-mix(in srgb, var(--on-surface) 11%, transparent);
-  --paper-grid: 22px;
-
-  --rail-width: 88px;
-  --content-max: 1180px;
+  --fast: 120ms;
+  --med: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* ---- type scale ------------------------------------------------------------------- */
-
-.display-l,
-.display-m,
-.display-s,
-.headline-l,
-.headline-m,
-.headline-s,
-.serif {
-  font-family: var(--font-display);
-  font-optical-sizing: auto;
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  letter-spacing: -0.01em;
+@media (max-width: 1100px) {
+  :root {
+    --page-pad: 20px;
+    --margin-w: 136px;
+    --gutter: 20px;
+  }
 }
 
-.display-l { font-size: 57px; line-height: 64px; font-weight: 360; letter-spacing: -0.02em; }
-.display-m { font-size: 45px; line-height: 52px; font-weight: 360; }
-.display-s { font-size: 36px; line-height: 44px; font-weight: 380; }
-.headline-l { font-size: 32px; line-height: 40px; font-weight: 400; }
-.headline-m { font-size: 28px; line-height: 36px; font-weight: 400; }
-.headline-s { font-size: 24px; line-height: 32px; font-weight: 400; }
-.title-l { font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -0.005em; }
-.title-m { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: 0; }
-.title-s { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0; }
-.body-l { font-size: 16px; line-height: 24px; letter-spacing: 0.1px; }
-.body-m { font-size: 14px; line-height: 20px; letter-spacing: 0.1px; }
-.body-s { font-size: 12px; line-height: 16px; letter-spacing: 0.2px; }
-.label-l { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0.1px; }
-.label-m { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.3px; }
-.label-s { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.4px; }
+/* on a phone the margin folds away: notes sit above their text, the line hugs the edge */
+@media (max-width: 760px) {
+  :root {
+    --page-pad: 16px;
+    --line-x: 14px;
+  }
+}
 
-.mono { font-family: var(--font-mono); font-size: 0.9em; letter-spacing: 0; }
-.muted { color: var(--on-surface-variant); }
+/* ---- the margin grid ------------------------------------------------------------------
+   Everything on a page is a row of two cells: a note in the margin, right-aligned against
+   the line, and the content after it. */
 
-/* ---- the highlighter: margin's signature mark ---------------------------------- */
+.m-grid {
+  display: grid;
+  grid-template-columns: var(--margin-w) minmax(0, 1fr);
+  column-gap: calc(var(--gutter) * 2);
+}
 
-/* A highlighter stroke behind text, swiped in from the left. Used for the one phrase that
-   matters on a page and for evidence. */
-.marker {
-  position: relative;
-  isolation: isolate;
+.m-note {
+  min-width: 0;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .m-grid {
+    display: block;
+    padding-left: calc(var(--line-x) + 2px);
+  }
+
+  .m-note {
+    text-align: left;
+  }
+}
+
+/* ---- type ----------------------------------------------------------------------------- */
+
+.title-l { font-size: 22px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; }
+.title-m { font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: -0.003em; }
+.title-s { font-size: 13px; line-height: 18px; font-weight: 600; }
+.body-l { font-size: 16px; line-height: 24px; }
+.body-m { font-size: 14px; line-height: 20px; }
+.body-s { font-size: 12.5px; line-height: 18px; }
+.label-l { font-size: 13px; line-height: 18px; font-weight: 600; }
+.label-m { font-size: 12px; line-height: 16px; font-weight: 600; }
+
+.serif { font-family: var(--font-serif); }
+.mono { font-family: var(--font-mono); font-size: 0.92em; letter-spacing: 0; }
+.muted { color: var(--ink-2); }
+.faint { color: var(--ink-3); }
+
+/* a text link: underlined in a hairline that darkens under the pointer */
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--fast) var(--ease);
+}
+
+.link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* a small boxed word: a kind, a source, a state */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 5px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 
-.marker::before {
-  content: "";
-  position: absolute;
-  inset: 52% -0.12em 4% -0.08em;
-  z-index: -1;
-  border-radius: 0.18em 0.32em 0.22em 0.4em;
-  background: var(--marker);
-  transform: skewX(-8deg) scaleX(var(--marker-progress, 1));
-  transform-origin: left center;
-  animation: marker-swipe 900ms var(--ease-emphasized) 350ms both;
+.tag[data-tone="red"] {
+  border-color: color-mix(in srgb, var(--red) 55%, transparent);
+  color: var(--red);
 }
 
-@keyframes marker-swipe {
-  from { transform: skewX(-8deg) scaleX(0); }
+.tag[data-tone="blue"] {
+  border-color: color-mix(in srgb, var(--blue) 55%, transparent);
+  color: var(--blue);
+}
+
+.tag[data-tone="ink"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
 }
