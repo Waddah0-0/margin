@@ -80,3 +80,6 @@ CLAUDE.md
 
 # the web UI bundled into margin-api at release time (scripts/build_release.py)
 packages/api/src/margin_api/ui/
+
+# local agent plugins and state
+.agents/
