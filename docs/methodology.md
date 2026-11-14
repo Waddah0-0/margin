@@ -1,7 +1,7 @@
 # How the AI Code Detector scores code
 
 This page explains what the AI Code Detector's numbers mean, how they are produced, and how
-far to trust them. It describes methodology v1, used by detector 0.2.0.
+far to trust them. It describes methodology v1, used by detector 0.2.0 and later.
 
 In short, the detector is good at ranking repositories, putting the more AI-like ones above
 the less AI-like ones, and bad at deciding about any single one. It must not be the basis for

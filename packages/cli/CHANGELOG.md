@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- On Windows, `margin run` no longer crashes with `UnicodeEncodeError` when the report is piped
+  or redirected and contains characters such as `→`. The report is written as UTF-8.
+
 ## [0.1.2] - 2026-11-02
 
 ### Security

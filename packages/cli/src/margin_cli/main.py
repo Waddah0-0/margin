@@ -1,4 +1,4 @@
-"""The ``agents`` command: list, inspect and run installed agents.
+"""The ``margin`` command: list, inspect and run installed agents.
 
 Output conventions: the report (or the ``--json`` listing) goes to stdout and nothing else
 does, so ``margin run ... --format json > report.json`` always produces valid JSON. Progress,
@@ -19,6 +19,7 @@ Exit codes:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import sys
@@ -190,6 +191,27 @@ def _render(result: AgentResult, fmt: ReportFormat) -> str:
     return to_json(result) + "\n" if fmt is ReportFormat.json else to_markdown(result)
 
 
+def _write_stdout(text: str) -> None:
+    """Write ``text`` to stdout as UTF-8, even when redirected with cp1252 on Windows."""
+    stream = sys.stdout
+    if stream is None:
+        return
+    reconfigure = getattr(stream, "reconfigure", None)
+    if callable(reconfigure):
+        with contextlib.suppress(OSError, ValueError, AttributeError):
+            reconfigure(encoding="utf-8", errors="replace")
+    try:
+        stream.write(text)
+        stream.flush()
+    except UnicodeEncodeError:
+        buffer = getattr(stream, "buffer", None)
+        if buffer is None:
+            raise
+        stream.flush()
+        buffer.write(text.encode("utf-8", errors="replace"))
+        buffer.flush()
+
+
 def _exit_code(result: AgentResult | None, cancelled: bool, strict: bool) -> ExitCode:
     if cancelled or result is None:
         return ExitCode.CANCELLED
@@ -278,7 +300,7 @@ def run_agent(
             out.write_text(report, encoding="utf-8")
             stderr.print(f"Report written to {out}", highlight=False)
         else:
-            typer.echo(report, nl=False)
+            _write_stdout(report)
         for warning in result.warnings:
             stderr.print(f"[yellow]Warning:[/] {escape(warning)}", highlight=False)
         if result.status == "error":

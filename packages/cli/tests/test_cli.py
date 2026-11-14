@@ -244,6 +244,51 @@ def test_partial_exits_0_or_4_with_strict(folder: Path) -> None:
     assert invoke("run", "lister", str(folder), "--set", "mode=partial", "--strict")[0] == 4
 
 
+def test_run_markdown_preserves_unicode_arrows_and_times() -> None:
+    code, out, err = invoke("run", "echo", "a \u2192 b \u00d7 c")
+    assert code == 0 and "a \u2192 b \u00d7 c" in out and err == ""
+
+
+def test_write_stdout_handles_cp1252(monkeypatch: pytest.MonkeyPatch) -> None:
+    raw = io.BytesIO()
+    wrapper = io.TextIOWrapper(raw, encoding="cp1252", newline="\n")
+    try:
+        monkeypatch.setattr(sys, "stdout", wrapper)
+        cli._write_stdout("a \u2192 b \u00d7 c\n")
+        assert raw.getvalue().decode("utf-8") == "a \u2192 b \u00d7 c\n"
+    finally:
+        wrapper.detach()
+
+
+def test_write_stdout_falls_back_to_buffer_when_reconfigure_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw = io.BytesIO()
+    wrapper = io.TextIOWrapper(raw, encoding="cp1252", newline="\n")
+
+    class NonReconfigurableStream:
+        def __init__(self, inner: io.TextIOWrapper) -> None:
+            self._inner = inner
+            self.buffer = inner.buffer
+
+        def reconfigure(self, **kwargs: object) -> None:
+            raise OSError("cannot reconfigure")
+
+        def write(self, text: str) -> int:
+            return self._inner.write(text)
+
+        def flush(self) -> None:
+            self._inner.flush()
+
+    try:
+        wrapper.write("prefix\n")
+        monkeypatch.setattr(sys, "stdout", NonReconfigurableStream(wrapper))
+        cli._write_stdout("a \u2192 b \u00d7 c\n")
+        assert raw.getvalue().decode("utf-8") == "prefix\na \u2192 b \u00d7 c\n"
+    finally:
+        wrapper.detach()
+
+
 # ---- run: LLM selection ---------------------------------------------------------------
 
 
@@ -452,3 +497,34 @@ def test_ctrl_c_cancels_and_exits_130() -> None:
     out, err = proc.communicate(timeout=30)
     assert proc.returncode == 130, err
     assert out == "" and "Cancelled" in err
+
+
+CP1252_SCRIPT = """
+import sys
+from echo_agent import EchoAgent
+from margin_cli import main as cli
+from margin_core import AgentRegistry
+
+assert (sys.stdout.encoding or "").lower() in {"cp1252", "windows-1252"}, sys.stdout.encoding
+registry = AgentRegistry([])
+registry.register(EchoAgent)
+cli.get_registry = lambda: registry
+cli.app(["run", "echo", "a \\u2192 b \\u00d7 c", "--quiet"])
+"""
+
+
+def test_run_subprocess_cp1252_stdout_outputs_valid_utf8() -> None:
+    env = {**os.environ, "MARGIN_ENV_FILE": "", "PYTHONIOENCODING": "cp1252"}
+    env.pop("PYTHONUTF8", None)
+    proc = subprocess.run(
+        [sys.executable, "-c", CP1252_SCRIPT],
+        capture_output=True,
+        env=env,
+        timeout=30,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr.decode("utf-8", errors="replace")
+    assert proc.stderr == b""
+    text = proc.stdout.decode("utf-8")
+    assert "# echo report" in text
+    assert "a \u2192 b \u00d7 c" in text

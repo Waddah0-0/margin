@@ -9,6 +9,13 @@ All notable changes to this package are documented here. The format follows
 ### Added
 - `RunView.input`: the input as the caller sent it, without the run's own output folder.
   Sending it again repeats the run; the web UI uses it for "Run again".
+- The bundled web UI names each browser tab after its page; a run's tab shows its progress or
+  that it needs an answer.
+
+### Changed
+- The bundled web UI is redesigned around a ruled margin: notes on the left, content on the
+  right, red for what was flagged and blue for what was checked.
+- Result views load only when first shown.
 
 ### Fixed
 - An upload named after a Windows device, such as `NUL` or `con.csv`, gets a `_` in front, so
