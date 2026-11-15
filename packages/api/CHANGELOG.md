@@ -11,6 +11,8 @@ All notable changes to this package are documented here. The format follows
   Sending it again repeats the run; the web UI uses it for "Run again".
 - The bundled web UI names each browser tab after its page; a run's tab shows its progress or
   that it needs an answer.
+- The bundled web UI has a view for the Commit Graph agent: the history drawn as a tree with
+  notes in the margin, a replay slider, chapters, and findings or a file lit up on the tree.
 
 ### Changed
 - The bundled web UI is redesigned around a ruled margin: notes on the left, content on the

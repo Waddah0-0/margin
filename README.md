@@ -91,6 +91,7 @@ number is a button that opens the fact behind it:
 | [Data Storyteller](agents/data_storyteller/README.md) | Cleans a table of data, explains every change, and writes the story in it, every number checked. | Experimental |
 | [AI Code Detector](agents/ai_code_detector/README.md) | Estimates how likely a codebase was written with AI assistance, and shows the evidence. | Experimental |
 | [Echo](agents/echo/README.md) | Repeats what you tell it. It's here for testing, and for copying when you write your own. | Ready |
+| [Commit Graph](agents/commit_graph/README.md) | Draws a repository's history as its tree and tells the story in it: chapters, notes beside the commits, and the files that keep changing. | Experimental |
 
 Each one installs separately, and every margin tool finds whatever you've installed. Point the
 detector at a repository and it gives you a range, a confidence level and the files and lines

@@ -16,7 +16,10 @@ after it, so the line is the one axis the whole page hangs from. On a phone the 
 away: notes sit above their content and the line moves to the edge.
 
 The idea repeats where it is most useful. In the AI Code Detector's result, the notes on
-marked code sit in the code's own margin, level with the lines they are about.
+marked code sit in the code's own margin, level with the lines they are about. In the Commit
+Graph's tree, a commit's notes hang in the page margin, level with the commit. The tree's
+lanes are ink, not one colour per branch: red still only means flagged (a revert, a quick
+fix).
 
 There are no cards, no avatars and no hero. Sections are separated by hairlines. A list
 starts with one firm rule.

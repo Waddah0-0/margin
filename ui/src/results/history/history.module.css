@@ -1,0 +1,464 @@
+/* ---- head ---- */
+
+.lead {
+  font-size: 30px;
+  font-weight: 700;
+  font-stretch: 96%;
+  line-height: 36px;
+  letter-spacing: -0.028em;
+}
+
+.sub {
+  margin: 6px 0 18px;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--ink-2);
+}
+
+.branch {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.anchor {
+  scroll-margin-top: 16px;
+}
+
+/* ---- chapters ---- */
+
+.chapters {
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 10px;
+}
+
+.chapterNo {
+  padding-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.chapterTitle {
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 24px;
+  letter-spacing: -0.012em;
+}
+
+.chapterTitle button {
+  text-align: left;
+}
+
+.chapterTitle button:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* what the agent wrote is set in the serif */
+.prose {
+  max-width: var(--measure);
+  margin-top: 4px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 26px;
+}
+
+.cite {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-2);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.cite:hover {
+  text-decoration-color: currentColor;
+}
+
+.chapterMeta {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-3);
+}
+
+/* ---- what it shows ---- */
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 30px 40px;
+}
+
+.groupTitle {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
+}
+
+.groupWhy {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--ink-2);
+}
+
+.items {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item,
+.plainItem {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 0;
+  border-top: 1px solid var(--rule);
+  text-align: left;
+}
+
+.item:hover .itemWhat {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.itemWhat {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.itemDetail {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--ink-3);
+}
+
+/* ---- the tree ---- */
+
+.follow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.followInput {
+  flex: 1 1 240px;
+  max-width: 460px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.followInput:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.tree {
+  margin-top: -22px;
+  padding-bottom: 44px;
+}
+
+.column {
+  min-width: 0;
+}
+
+/* stays in view while the tree scrolls under it: the replay, what is lit, the open commit */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin-bottom: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+/* the bar also covers the margin beside it, so notes scrolling past don't read as its own */
+.bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: calc(100% + var(--gutter) * 2);
+  bottom: 0;
+  width: var(--margin-w);
+  background: var(--paper);
+}
+
+.replay {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ink);
+}
+
+.replayAt {
+  flex-shrink: 0;
+  min-width: 150px;
+  font-size: 12px;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.lit {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.lit code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.detailHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detailSubject {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.detailMeta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.detailMeta code,
+.detailFiles code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.detailNotes {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.detailNotes [data-flagged] {
+  color: var(--red);
+}
+
+.detailFiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.rows {
+  position: relative;
+}
+
+.lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lines path {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1.25;
+}
+
+.lines circle {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+
+.lines circle[data-merge] {
+  fill: var(--paper);
+  stroke: var(--ink);
+}
+
+.lines circle[data-flagged] {
+  fill: var(--red);
+}
+
+.lines circle[data-merge][data-flagged] {
+  fill: var(--paper);
+  stroke: var(--red);
+}
+
+.row,
+.chapterRow {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.row {
+  align-items: center;
+  padding-right: 6px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.row:hover,
+.row[data-selected] {
+  background: var(--paper-sunk);
+}
+
+.row[data-hidden],
+.chapterRow[data-hidden] {
+  visibility: hidden;
+}
+
+.row[data-dim] > :not(.hang) {
+  opacity: 0.36;
+}
+
+/* a note in the margin, level with its commit, on the other side of the ruled line */
+.hang {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + var(--gutter) * 2);
+  width: var(--margin-w);
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--ink-3);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+.hang[data-flagged] {
+  color: var(--red);
+}
+
+.hang[data-lit] {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.subject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+
+.meta {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.meta code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.chapterRow {
+  align-items: baseline;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+
+.chapterRow .hang {
+  top: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  transform: none;
+}
+
+.chapterRowTitle {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapterRowDates {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+@media (max-width: 760px) {
+  .tree {
+    margin-top: 0;
+  }
+
+  /* the margin folds away on a phone; a commit's notes are in the panel it opens */
+  .hang,
+  .date,
+  .replayAt,
+  .bar::before {
+    display: none;
+  }
+}

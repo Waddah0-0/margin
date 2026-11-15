@@ -35,6 +35,7 @@ margin-api = { workspace = true }
 margin-ai-code-detector = { workspace = true }
 margin-echo = { workspace = true }
 margin-data-storyteller = { workspace = true }
+margin-commit-graph = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -61,6 +62,7 @@ mypy_path = [
     "agents/ai_code_detector/src",
     "agents/echo/src",
     "agents/data_storyteller/src",
+    "agents/commit_graph/src",
 ]
 strict = true
 warn_return_any = true

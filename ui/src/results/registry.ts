@@ -19,6 +19,9 @@ const DetectorResult = lazy(() =>
 const DetectorIntro = lazy(() =>
   import("./detector/DetectorIntro").then((m) => ({ default: m.DetectorIntro })),
 );
+const HistoryResult = lazy(() =>
+  import("./history/HistoryResult").then((m) => ({ default: m.HistoryResult })),
+);
 const StorytellerResult = lazy(() =>
   import("./storyteller/StorytellerResult").then((m) => ({ default: m.StorytellerResult })),
 );
@@ -34,6 +37,7 @@ export interface AgentIntroProps {
 
 const views = new Map<string, ComponentType<ResultViewProps>>([
   ["ai-code-detector", DetectorResult],
+  ["commit-graph", HistoryResult],
   ["data-storyteller", StorytellerResult],
 ]);
 const intros = new Map<string, ComponentType<AgentIntroProps>>([["ai-code-detector", DetectorIntro]]);
