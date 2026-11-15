@@ -10,6 +10,19 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* the lamp: a fixed layer behind the page, so scrolling never repaints it. A faint grain on
+   top keeps the soft gradient from showing as rings on 8-bit screens. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(60% 50% at 54% 92%, var(--lamp), transparent 78%);
+  pointer-events: none;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;

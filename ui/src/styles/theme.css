@@ -13,7 +13,7 @@
   /* ink: text, in three strengths, and the fill of the one primary action */
   --ink: light-dark(#141413, #ecece6);
   --ink-2: light-dark(#4b4b46, #b0b0a7);
-  --ink-3: light-dark(#6e6e67, #85857c);
+  --ink-3: light-dark(#6e6e67, #96968c);
   --on-ink: var(--paper);
 
   /* rules: hairlines between things, and the firmer line around a control */
@@ -28,6 +28,9 @@
 
   /* the ruled line every page hangs from */
   --margin-line: light-dark(rgb(200 50 31 / 0.5), rgb(255 112 89 / 0.42));
+
+  /* a faint warm light low on the page, like a desk lamp on paper; never red or blue */
+  --lamp: light-dark(rgb(214 176 112 / 0.1), rgb(214 176 112 / 0.045));
 
   --shadow-pop: light-dark(
     0 12px 32px rgb(20 20 19 / 0.14), 0 2px 6px rgb(20 20 19 / 0.08),

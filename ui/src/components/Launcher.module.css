@@ -75,20 +75,56 @@
   box-shadow: 0 2px 0 var(--ink);
 }
 
+/* the file blank is a drop target, so it is drawn like the form's drop zone: a dashed box */
 .file {
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border: 1px dashed var(--rule-2);
+  background: var(--paper-raised);
+  box-shadow: none;
+  font-size: 18px;
   font-weight: 400;
+  line-height: 30px;
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
+  transition:
+    border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.file:hover:not(:disabled) {
+  border-color: var(--ink-3);
+  box-shadow: none;
+  color: var(--ink);
+}
+
+.file:focus-visible {
+  border-color: var(--blue);
+  box-shadow: none;
+}
+
+.fileIcon {
+  flex-shrink: 0;
   color: var(--ink-3);
+}
+
+.fileLabel {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.file:focus-visible {
-  box-shadow: 0 2px 0 var(--blue);
+.sentence[data-dragging] .file {
+  border-style: solid;
+  border-color: var(--blue);
+  background: var(--blue-tint);
+  color: var(--blue);
 }
 
-.sentence[data-dragging] .file {
-  box-shadow: 0 2px 0 var(--blue);
+.sentence[data-dragging] .fileIcon {
   color: var(--blue);
 }
 
@@ -197,5 +233,10 @@
 
   .blank {
     flex-basis: 100%;
+  }
+
+  .file {
+    font-size: 16px;
+    line-height: 26px;
   }
 }

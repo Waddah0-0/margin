@@ -214,11 +214,14 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
               onClick={() => fileRef.current?.click()}
               disabled={busy}
             >
-              {uploading
-                ? `${uploading.name} (${Math.round(uploading.fraction * 100)}%)`
-                : dragging
-                  ? "drop it here"
-                  : "a file you choose or drop"}
+              <Icon name="upload" size={18} className={styles.fileIcon} />
+              <span className={styles.fileLabel}>
+                {uploading
+                  ? `${uploading.name} (${Math.round(uploading.fraction * 100)}%)`
+                  : dragging
+                    ? "drop it here"
+                    : "a file you choose or drop"}
+              </span>
             </button>
           </>
         ) : primary ? (

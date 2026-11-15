@@ -5,7 +5,8 @@ How the web UI looks and behaves, and the reasons behind it.
 ## The margin
 
 margin's agents show their work, and the name says where that work goes. So every page is
-ruled like a sheet of paper. A thin red line runs down it from top to bottom. Left of the
+ruled like a sheet of paper. A thin red line runs down it, from below the top bar to the
+footer. Left of the
 line is the margin, and it holds notes: the name of a section, a count, when a run started,
 which model it used. Right of the line is the content the note is about.
 
@@ -32,7 +33,8 @@ Paper, ink, and an editor's two-ended pencil.
 Nothing else is coloured. The primary action is filled with ink, and there is one per view.
 Links are underlined. If something is red or blue, an agent or a check put it there. The
 one exception is the margin line itself, a faded red like the line on ruled paper; it never
-marks anything.
+marks anything. Behind the page sits a faint warm light, like a desk lamp on the paper. It is
+never red or blue, so it can't be mistaken for a mark.
 
 The tokens are in `src/styles/theme.css`, written by hand. Each one holds its light and dark
 value with `light-dark()`, so the theme switch only changes `color-scheme`.

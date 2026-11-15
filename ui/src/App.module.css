@@ -1,4 +1,5 @@
-/* The sheet: a page-wide column with the ruled margin line running down it, top to bottom. */
+/* The sheet: a page-wide column; the ruled margin line runs down the main area, from below the
+   top bar to the footer. */
 .shell {
   position: relative;
   display: flex;
@@ -9,17 +10,20 @@
   padding-inline: var(--page-pad);
 }
 
-.shell::before {
+.main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* .main starts after the page padding, so the line sits at --line-x less that padding */
+.main::before {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--line-x);
+  left: calc(var(--line-x) - var(--page-pad));
   width: 1px;
   background: var(--margin-line);
   pointer-events: none;
-}
-
-.main {
-  min-width: 0;
 }
