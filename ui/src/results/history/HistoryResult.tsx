@@ -499,8 +499,8 @@ function HistoryView({ run, result, data }: ResultViewProps & { data: HistoryDat
                   onChange={(e) => followFile(e.target.value)}
                 />
                 <datalist id="history-files">
-                  {data.files.map((f) => (
-                    <option key={f.path} value={f.path} />
+                  {[...new Set(data.files.map((f) => f.path))].map((path) => (
+                    <option key={path} value={path} />
                   ))}
                 </datalist>
               </label>

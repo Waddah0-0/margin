@@ -64,19 +64,32 @@ def _ancestors(commits: Sequence[RawCommit], rows: dict[str, int]) -> list[int]:
     return reach
 
 
+def _quiet_days(commits: Sequence[RawCommit]) -> list[int]:
+    """Whole days since the commit before, by date, in the whole history shown.
+
+    A branch that starts from an old commit is not a quiet spell: the gap is measured from
+    the last commit anyone made, not from the commit's own parent.
+    """
+    quiet = [0] * len(commits)
+    by_date = sorted(range(len(commits)), key=lambda row: commits[row].date)
+    for earlier, row in zip(by_date, by_date[1:], strict=False):
+        quiet[row] = (commits[row].date - commits[earlier].date).days
+    return quiet
+
+
 def _commit_notes(commits: Sequence[RawCommit], rows: dict[str, int]) -> list[list[Note]]:
     notes: list[list[Note]] = [[] for _ in commits]
     reach = _ancestors(commits, rows)
     sizes = [len(c.changes) for c in commits if c.changes]
     big = max(BIG_COMMIT_FILES, 10 * int(median(sizes))) if sizes else BIG_COMMIT_FILES
+    quiet_before = _quiet_days(commits)
     for row, commit in enumerate(commits):
         if not commit.parents:
             notes[row].append(Note(kind="root", text="The first commit"))
         first = rows.get(commit.parents[0]) if commit.parents else None
-        if first is not None:
-            quiet = (commit.date - commits[first].date).days
-            if quiet >= QUIET_DAYS:
-                notes[row].append(Note(kind="gap", text=f"After {quiet} quiet days"))
+        quiet = quiet_before[row]
+        if quiet >= QUIET_DAYS:
+            notes[row].append(Note(kind="gap", text=f"After {quiet} quiet days"))
         if commit.is_merge and first is not None and commit.parents[1] in rows:
             side = reach[rows[commit.parents[1]]] & ~reach[first]
             if side:

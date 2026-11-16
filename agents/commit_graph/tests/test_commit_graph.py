@@ -183,6 +183,20 @@ def test_notes_for_the_first_commit_a_merge_a_revert_and_a_quiet_gap() -> None:
     assert any(n.flagged for n in notes[0])
 
 
+def test_a_branch_from_an_old_commit_is_not_a_quiet_spell() -> None:
+    day = 24
+    history = [
+        commit("m", ["a3", "b1"], hours=31 * day),
+        commit("b1", ["a1"], hours=30 * day + 12),
+        commit("a3", ["a2"], hours=30 * day),
+        commit("a2", ["a1"], hours=10 * day),
+        commit("a1", [], hours=1),
+    ]
+    notes = find(history).notes
+    assert [n.text for n in notes[2] if n.kind == "gap"] == ["After 20 quiet days"]
+    assert not [n for n in notes[1] if n.kind == "gap"]
+
+
 def test_two_quick_fixes_make_a_chain_and_one_does_not() -> None:
     history = [
         commit("f3", ["x"], hours=10.2, subject="fix typo"),
