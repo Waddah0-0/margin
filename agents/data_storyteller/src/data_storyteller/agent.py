@@ -21,7 +21,7 @@ class DataStorytellerAgent(BaseAgent):
     description = (
         "Cleans a table of data, shows every change it made, and tells the story in it with charts."
     )
-    version = "0.1.1"
+    version = "0.1.2"
     InputModel = DataStorytellerInput
     OutputModel = DataStorytellerOutput
     primary_input = "dataset"
