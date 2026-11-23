@@ -37,8 +37,9 @@ class DataStorytellerInput(AnswersInput):
     )
     output_dir: str | None = Field(
         default=None,
-        description="Folder for the cleaned data (CSV) and the cleaning report (JSON). "
-        "Nothing is written when empty; in the web UI, both are offered for download.",
+        description="Folder for the cleaned data (CSV), the cleaning report (JSON), and "
+        "(when stop_after='story') the Power BI project bundle (.pbip.zip). "
+        "Nothing is written when empty; in the web UI, written files are offered for download.",
         # margin-api fills in a folder of the run's own and serves the files from it
         json_schema_extra={"format": "output-dir"},
     )

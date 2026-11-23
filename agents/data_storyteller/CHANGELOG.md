@@ -4,6 +4,13 @@ All notable changes to this agent are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- In story mode, `output_dir` also gets `<name>.pbip.zip`: a Power BI project with the
+  cleaned table (personal-data columns left out), a model with measures for the main facts,
+  and a report page for each story page. Not yet opened in Power BI Desktop.
+
 ## [0.1.2] - 2026-11-20
 
 ### Security

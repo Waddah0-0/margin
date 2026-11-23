@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from data_storyteller.models import (
     Step,
     TableInfo,
 )
+from data_storyteller.names import safe_name
 
 ANSWERED = {
     "user": "You chose",
@@ -32,7 +34,6 @@ READ_AS = {"number": "numbers", "date": "dates", "text": "text", "empty": "empty
 TOP_FACTS = 10
 FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 PLAIN_SIGNED = re.compile(r"^[+-][\d\s().,-]*$")  # -5 or +1 (555) 010-0100: harmless, left alone
-UNSAFE_IN_NAME = re.compile(r"[^\w.\- ()]+")
 
 TITLES = {
     "header": "Where the data starts",
@@ -254,10 +255,18 @@ def quote_formulas(frame: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
 
 def write(
-    folder: str, data: DataStorytellerOutput, clean: Clean, answers: dict[str, Answer]
+    folder: str,
+    data: DataStorytellerOutput,
+    clean: Clean,
+    answers: dict[str, Answer],
+    warn: Callable[[str], None] | None = None,
 ) -> tuple[list[str], int]:
-    """Write the cleaned table (CSV) and the report (JSON). Returns the paths written and how
-    many cells were quoted because a spreadsheet would run them as formulas."""
+    """Write the cleaned table (CSV), the report (JSON), and (when a story is built) a
+    Power BI project bundle (.pbip.zip). Returns the paths written and how many cells were
+    quoted because a spreadsheet would run them as formulas.
+
+    The Power BI bundle is an extra: if it can't be built, ``warn`` says so and the cleaned
+    table and the report are still returned."""
     out = Path(folder).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
     stem = _name_part(Path(data.source.file).stem)
@@ -269,11 +278,22 @@ def write(
     if csv_path.resolve().parent != out or report_path.resolve().parent != out:
         raise ValueError(f"Refusing to write {stem!r} outside {out}")
     frame = clean.frame.copy()
-    for column, kind in clean.kinds.items():
-        if kind == "date" and column in frame:
+    column_types: dict[str, str] = {}
+    for column in clean.frame.columns:
+        name = str(column)
+        kind = clean.kinds.get(name, "text")
+        if kind == "date":
             dates = frame[column]
             midnight = (dates.dropna() == dates.dropna().dt.normalize()).all()
+            column_types[name] = "date" if midnight else "dateTime"
             frame[column] = dates.dt.strftime("%Y-%m-%d" if midnight else "%Y-%m-%d %H:%M:%S")
+        elif kind == "number":
+            dtype_name = str(clean.frame[column].dtype)
+            column_types[name] = (
+                "int64" if dtype_name.startswith(("int", "Int", "uint", "UInt")) else "double"
+            )
+        else:
+            column_types[name] = "string"
     frame, quoted = quote_formulas(frame)
     if quoted:
         data.source.notes.append(formula_note(quoted))
@@ -282,12 +302,31 @@ def write(
     report = data.model_dump(mode="json", exclude={"files"})
     report["answers"] = [a.model_dump(mode="json") for a in answers.values()]
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    return [str(csv_path), str(report_path)], quoted
+    written = [str(csv_path), str(report_path)]
+    if data.story is not None:
+        from data_storyteller.pbip import write_pbip_zip
+
+        try:
+            zip_path = write_pbip_zip(
+                out,
+                stem,
+                data,
+                csv_path,
+                clean_columns=[str(c) for c in clean.frame.columns],
+                csv_columns=[str(c) for c in frame.columns],
+                column_types=column_types,
+            )
+        except Exception as exc:  # noqa: BLE001 - any failure here only loses the extra file
+            if warn is not None:
+                warn(f"The Power BI project could not be written, so it was left out: {exc}")
+        else:
+            written.append(str(zip_path))
+    return written, quoted
 
 
 def _name_part(text: str) -> str:
     """Part of a file name: no folders and no characters that mean something to an OS."""
-    return UNSAFE_IN_NAME.sub("_", text).strip(" .")[:80] or "table"
+    return safe_name(text, max_len=80)
 
 
 def formula_note(quoted: int) -> str:

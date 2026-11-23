@@ -3,7 +3,8 @@
 Cleans a table of data, shows every change it made, and tells the story in it with charts.
 
 > **Status: experimental.** Cleaning, facts, the written story and its charts work and are
-> tested, also with a local model. The Power BI export is being built.
+> tested, also with a local model. The Power BI project export (`.pbip.zip`) is new: its
+> files and DAX are checked by tests, but it has not yet been opened in Power BI Desktop.
 
 ## What it does
 
@@ -60,6 +61,13 @@ trust the numbers before working with them.
     is about in colour, a meter for concentration, before-and-after dots for groups that
     changed, and the series around an anomaly. In the web UI every number in the story
     opens the fact behind it, and every chart can be shown as a table.
+12. **Export to Power BI** (story mode with `output_dir`): writes `<name>.pbip.zip`, a
+    Power BI Project archive containing a personal-data-free `<name>.clean.csv`,
+    `<name>.pbip`, a semantic model (`model.bim` with typed non-personal columns, a
+    `DataFolder` parameter, and DAX measures for key facts), a report (`report.json` with
+    pages and visuals matching the story), and `README.txt`. Unzip the archive into one
+    folder, open `<name>.pbip` in Power BI Desktop, and set `DataFolder` once
+    (`Transform data -> Edit parameters`) to that folder's path.
 
 ## Input
 
@@ -68,7 +76,7 @@ trust the numbers before working with them.
 | `dataset` | required | Path to the file. The primary input. In the web UI you can upload the file instead. |
 | `table` | asked | The sheet or table, when the file has more than one. |
 | `stop_after` | `clean` | `clean`, or `story` to also set up the story (the main number, what one row is, how numbers add up), find its facts and write it. |
-| `output_dir` | none | A folder for the cleaned table (`<name>.clean.csv`) and the report (`<name>.cleaning.json`). Nothing is written without it, except in the web UI, which gives every run a folder and offers both files for download. |
+| `output_dir` | none | A folder for the cleaned table (`<name>.clean.csv`), the report (`<name>.cleaning.json`), and in story mode the Power BI project bundle (`<name>.pbip.zip`). Nothing is written without it, except in the web UI, which gives every run a folder and offers written files for download. |
 | `answers` | `{}` | Answers given up front, by question id, for example `{"date_order:order_date": "dmy"}`. These are not asked. |
 | `assume_defaults` | `false` | Ask nothing and take every suggested answer. Each one is marked as not confirmed. |
 
@@ -96,7 +104,8 @@ are listed in the report under `answers`.
   the fact it came from), who wrote it (`model` or `template`), how many drafts the model
   wrote, and what the validator refused. A chart is a kind (`line`, `bars`, `dumbbell` or
   `meter`), a title, its fact, and its points.
-- `files`: the files written to `output_dir`.
+- `files`: the files written to `output_dir` (`<name>.clean.csv`, `<name>.cleaning.json`, and
+  in story mode `<name>.pbip.zip`).
 
 Findings: in story mode, the story first, one finding per page; then one per change, each
 with its evidence; one per column note (personal data, a column that is mostly empty); and
@@ -107,7 +116,10 @@ the final check.
 - One table per run. Tables are not joined.
 - Files up to 500 MB, read into memory.
 - Personal data is detected from column names and value patterns, so it can miss some. It
-  stays in the cleaned file; only this report leaves it out.
+  stays in `<name>.clean.csv` in `output_dir`; the cleaning report, model prompt, and the
+  Power BI bundle (`.pbip.zip`, including its CSV copy) leave it out.
+- The Power BI project export has been checked by automated schema and DAX tests, not yet by
+  opening the unzipped `.pbip` in Power BI Desktop by hand.
 - How a number adds up is guessed from its name (sales add up, prices are averaged). A
   name that says nothing is asked about only in story mode.
 - Facts describe associations. A correlation or a gap between groups is never stated as a

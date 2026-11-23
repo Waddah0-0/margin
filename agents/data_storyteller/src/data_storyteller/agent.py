@@ -104,7 +104,7 @@ class DataStorytellerAgent(BaseAgent):
         if input.output_dir:
             ctx.report_progress("write", f"Writing to {input.output_dir}", 0.9)
             data.files, quoted = await asyncio.to_thread(
-                report.write, input.output_dir, data, clean, answers
+                report.write, input.output_dir, data, clean, answers, ctx.warn
             )
             if quoted:
                 warnings.append(report.formula_note(quoted))
