@@ -4,7 +4,7 @@ Draws a repository's history as its tree and tells the story in it: chapters, no
 the commits, and the files that keep changing.
 
 > **Status: experimental.** The graph, the chapters, the findings and the poster work and are
-> tested. It is not on PyPI yet.
+> tested.
 
 ## What it does
 
@@ -93,6 +93,7 @@ The same findings are returned as `findings`, each with its evidence.
 ## Usage
 
 ```bash
+pip install margin-cli margin-commit-graph
 margin run commit-graph https://github.com/psf/requests
 margin run commit-graph . --set max_commits=1000 --set output_dir=out
 margin run commit-graph . --set write_with_model=false --format json

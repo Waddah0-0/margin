@@ -7,16 +7,26 @@ requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Waddah Ali" }]
-# Not published yet; remove this line when the agent is ready for PyPI.
-classifiers = ["Private :: Do Not Upload"]
+keywords = ["git", "history", "visualization", "repository", "agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+    "Topic :: Software Development :: Version Control :: Git",
+]
 dependencies = [
-    "margin-core>=0.1.0,<0.2",
+    "margin-core>=0.1.3,<0.2",  # 0.1.3: reading history never fetches over the network
 ]
 
 [project.urls]
 Homepage = "https://github.com/Waddah0-0/margin"
 Source = "https://github.com/Waddah0-0/margin/tree/main/agents/commit_graph"
 Issues = "https://github.com/Waddah0-0/margin/issues"
+Changelog = "https://github.com/Waddah0-0/margin/blob/main/agents/commit_graph/CHANGELOG.md"
 
 [project.entry-points."margin.agents"]
 commit-graph = "commit_graph.agent:CommitGraphAgent"
@@ -24,8 +34,7 @@ commit-graph = "commit_graph.agent:CommitGraphAgent"
 [tool.margin]
 id = "commit-graph"
 stage = "experimental"
-# Turn on mirroring once the agent does real work (and set stage to "experimental"):
-# mirror = "<owner>/margin-commit-graph"
+mirror = "Waddah0-0/margin-commit-graph"
 
 [build-system]
 requires = ["hatchling"]

@@ -228,6 +228,9 @@ def test_only_working_agents_with_a_mirror_key_are_targets() -> None:
             "ai-code-detector", "agents/ai_code_detector", "Waddah0-0/margin-ai-code-detector"
         ),
         mirror_agents.MirrorTarget(
+            "commit-graph", "agents/commit_graph", "Waddah0-0/margin-commit-graph"
+        ),
+        mirror_agents.MirrorTarget(
             "data-storyteller", "agents/data_storyteller", "Waddah0-0/margin-data-storyteller"
         ),
     ]  # echo is never mirrored
