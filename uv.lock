@@ -25,6 +25,7 @@ members = [
     "margin-core",
     "margin-data-storyteller",
     "margin-echo",
+    "margin-secret-leaks",
     "margin-workspace",
 ]
 
@@ -525,6 +526,17 @@ requires-dist = [
 name = "margin-echo"
 version = "0.1.0"
 source = { editable = "agents/echo" }
+dependencies = [
+    { name = "margin-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "margin-core", editable = "packages/core" }]
+
+[[package]]
+name = "margin-secret-leaks"
+version = "0.1.0"
+source = { editable = "agents/secret_leaks" }
 dependencies = [
     { name = "margin-core" },
 ]

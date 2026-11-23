@@ -92,6 +92,7 @@ number is a button that opens the fact behind it:
 | [AI Code Detector](agents/ai_code_detector/README.md) | Estimates how likely a codebase was written with AI assistance, and shows the evidence. | Experimental |
 | [Echo](agents/echo/README.md) | Repeats what you tell it. It's here for testing, and for copying when you write your own. | Ready |
 | [Commit Graph](agents/commit_graph/README.md) | Draws a repository's history as its tree and tells the story in it: chapters, notes beside the commits, and the files that keep changing. | Experimental |
+| [Secret Leaks](agents/secret_leaks/README.md) | Scans workspace files and git history for hardcoded secrets, API keys, private keys, and credentials, reporting only redacted previews. | Experimental |
 
 Each one installs separately, and every margin tool finds whatever you've installed. Point the
 detector at a repository and it gives you a range, a confidence level and the files and lines

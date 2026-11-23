@@ -66,6 +66,7 @@ def test_real_agents_follow_the_standard() -> None:
         "commit_graph": [],
         "data_storyteller": [],
         "echo": [],
+        "secret_leaks": [],
     }
 
 
