@@ -58,6 +58,12 @@ anyone who can run the workflow could publish it.
    package's publish job; they run one at a time, so each waits for the one before it. Every
    package needs approving even if its version didn't change: versions already on PyPI are
    skipped, so a tag only publishes the packages whose version changed.
+5. Once every package is on PyPI, publish a GitHub release for the tag from the `CHANGELOG.md`
+   entries:
+
+   ```bash
+   gh release create v0.1.0 --title "margin 0.1.0" --notes "..."
+   ```
 
 A version on PyPI can never be replaced, only yanked (hidden from new installs). If something
 is wrong, fix it and publish the next version.
