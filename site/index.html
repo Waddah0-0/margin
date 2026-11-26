@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>margin — AI agents that show their work</title>
+    <meta
+      name="description"
+      content="Local AI agents that return the answer beside every line of code, commit, or row of data behind it."
+    />
+    <meta property="og:title" content="margin — AI agents that show their work" />
+    <meta
+      property="og:description"
+      content="Each agent does one job and runs on your own computer, with a local model or no model at all."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./images/ui-storyteller.webp" />
+    <link rel="icon" type="image/svg+xml" href="./images/mark.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&family=Google+Sans+Code:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("margin-site-theme");
+          if (saved === "dark" || saved === "light") {
+            document.documentElement.setAttribute("data-theme", saved);
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <div class="topbar-left">
+          <a class="brand" href="#top" aria-label="margin home">
+            <img class="brand-mark" src="./images/mark.svg" width="22" height="22" alt="" />
+            <span>margin</span>
+          </a>
+
+          <nav class="nav" aria-label="Primary">
+            <a href="#workbench">Workbench</a>
+            <a href="#guarantees">How it checks</a>
+            <a href="#agents">Agents</a>
+            <a href="#interface">Web UI</a>
+            <a href="#run">Install</a>
+          </nav>
+        </div>
+
+        <div class="topbar-right">
+          <button
+            type="button"
+            class="theme-btn"
+            id="theme-toggle"
+            aria-label="Switch to dark theme"
+            title="Switch light and dark theme"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+            </svg>
+          </button>
+          <a
+            class="nav-ext"
+            href="https://github.com/Waddah0-0/margin"
+            target="_blank"
+            rel="noopener"
+          >
+            GitHub <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero" id="top">
+        <div class="wrap">
+          <h1 class="hero-title">
+            AI agents that show their work.
+          </h1>
+
+          <p class="hero-lead">
+            Every answer comes with the receipts — the row of data, the commit, or the line of code behind it. Runs locally, with a local model or no model at all.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#workbench">Try the receipts</a>
+            <a
+              class="btn btn-ghost"
+              href="https://github.com/Waddah0-0/margin"
+              target="_blank"
+              rel="noopener"
+            >
+              View on GitHub <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <div class="install-line">
+            <code><span class="prompt">$</span>pip install margin-cli margin-data-storyteller</code>
+            <button
+              type="button"
+              class="copy-link"
+              data-copy="pip install margin-cli margin-data-storyteller"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Full-Bleed Interactive Workbench (Zero cards) -->
+      <section class="band-surface" id="workbench" aria-label="Interactive margin workbench">
+        <div class="wrap">
+          <div class="wb-bar">
+            <div class="tabs" role="tablist" aria-label="Sample agent output">
+              <button
+                type="button"
+                class="tab-btn"
+                role="tab"
+                id="tab-storyteller"
+                aria-selected="true"
+                aria-controls="panel-storyteller"
+                data-wb-tab="storyteller"
+              >
+                Data Storyteller
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                role="tab"
+                id="tab-detector"
+                aria-selected="false"
+                aria-controls="panel-detector"
+                data-wb-tab="detector"
+              >
+                AI Code Detector
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                role="tab"
+                id="tab-commit-graph"
+                aria-selected="false"
+                aria-controls="panel-commit-graph"
+                data-wb-tab="commit-graph"
+              >
+                Commit Graph
+              </button>
+            </div>
+
+            <div class="wb-cmd" id="wb-cmd-text">
+              margin run data-storyteller sales.csv --set stop_after=story
+            </div>
+          </div>
+
+          <!-- Panel 1: Data Storyteller -->
+          <div
+            class="wb-split"
+            id="panel-storyteller"
+            role="tabpanel"
+            aria-labelledby="tab-storyteller"
+          >
+            <div class="wb-stage">
+              <div class="metric-strip">
+                <div class="metric-big">
+                  <span class="metric-num" id="chart-value">$9,826</span>
+                  <span class="metric-date" id="chart-month">2026-06</span>
+                </div>
+                <span class="metric-meta">sales.csv · 600 rows · 32 facts computed twice</span>
+              </div>
+
+              <div class="chart-stage">
+                <svg
+                  id="storyteller-chart"
+                  class="chart-svg"
+                  viewBox="0 0 640 184"
+                  role="img"
+                  aria-label="Interactive monthly revenue chart from 2025-01 to 2026-06"
+                ></svg>
+              </div>
+
+              <p class="story-hint">
+                Select any underlined number to inspect its pandas and DuckDB SQL verification.
+              </p>
+
+              <div class="story-prose">
+                <p>
+                  Revenue rose
+                  <button type="button" class="fact" data-fact="growth" aria-pressed="true">63.4%</button>
+                  from
+                  <button type="button" class="fact" data-fact="first_half" aria-pressed="false">$29,938</button>
+                  in 2025-01 to 2025-06 to
+                  <button type="button" class="fact" data-fact="second_half" aria-pressed="false">$48,929</button>
+                  in 2026-01 to 2026-06.
+                </p>
+
+                <p>
+                  Total revenue came to
+                  <button type="button" class="fact" data-fact="total" aria-pressed="false">$115,286</button>.
+                  Over 18 months, revenue grew steadily by about 4% a month — the trend explains
+                  <button type="button" class="fact" data-fact="r2" aria-pressed="false">81.7%</button>
+                  of monthly movement. One ambiguous date
+                  (<button type="button" class="fact" data-fact="date_decision" data-tone="red" aria-pressed="false">05/02/2026 → 2026-05-02</button>)
+                  was assumed month-first and flagged.
+                </p>
+              </div>
+
+              <div class="export-line">
+                <span>Outputs:</span>
+                <span>sales.clean.csv</span>
+                <span>sales.cleaning.json</span>
+                <span>Power BI (.pbip)</span>
+                <span>Markdown / JSON</span>
+              </div>
+            </div>
+
+            <aside class="wb-margin" aria-live="polite" aria-label="Fact verification receipt">
+              <div>
+                <div class="margin-top">
+                  <span class="status-dot" id="receipt-status" data-tone="blue">Verified · Dual compute</span>
+                  <span class="margin-id" id="receipt-source">period_growth_pct</span>
+                </div>
+
+                <div class="margin-figure" id="receipt-value">63.4%</div>
+                <p class="margin-desc" id="receipt-desc">
+                  Relative revenue change between 2025-01..2025-06 and 2026-01..2026-06.
+                </p>
+
+                <div class="proof-row">
+                  <div class="proof-head">
+                    <span class="proof-label" id="receipt-a-label">pandas</span>
+                    <span class="proof-val" id="receipt-a-val">0.634344</span>
+                  </div>
+                  <pre class="proof-code" id="receipt-a-code">(h2.sum() - h1.sum()) / h1.sum()</pre>
+                </div>
+
+                <div class="proof-row">
+                  <div class="proof-head">
+                    <span class="proof-label" id="receipt-b-label">DuckDB SQL</span>
+                    <span class="proof-val" id="receipt-b-val">0.634344</span>
+                  </div>
+                  <pre class="proof-code" id="receipt-b-code">SELECT
+  (SUM(rev) FILTER (WHERE ym >= '2026-01')
+ - SUM(rev) FILTER (WHERE ym &lt;= '2025-06'))
+ / SUM(rev) FILTER (WHERE ym &lt;= '2025-06')
+FROM cleaned_sales;</pre>
+                </div>
+              </div>
+
+              <div class="margin-foot">
+                <span id="receipt-match">Exact agreement (Δ = 0.0000)</span>
+                <span>No model used</span>
+              </div>
+            </aside>
+          </div>
+
+          <!-- Panel 2: AI Code Detector -->
+          <div
+            class="wb-split"
+            id="panel-detector"
+            role="tabpanel"
+            aria-labelledby="tab-detector"
+            hidden
+          >
+            <div class="wb-stage">
+              <div class="det-header">
+                <div>
+                  <div class="det-score" id="det-score">0.62</div>
+                  <div class="det-band" id="det-band">
+                    plausibly between <code>0.47</code> and <code>0.77</code>
+                  </div>
+                </div>
+                <span class="metric-meta">145 files scored · 79 commits · methodology v1</span>
+              </div>
+
+              <div class="ruler-box">
+                <div class="ruler-track">
+                  <div class="ruler-range-bar" id="ruler-band" data-tone="red" style="left: 47%; width: 30%;"></div>
+                  <svg id="detector-ruler" class="ruler-svg" viewBox="0 0 640 44" preserveAspectRatio="none" aria-hidden="true"></svg>
+                  <div class="ruler-needle" id="ruler-needle" style="left: 62%;"></div>
+                </div>
+                <div class="ruler-ends">
+                  <span class="human">0 · reads like people wrote it</span>
+                  <span class="ai">reads like AI wrote it · 1</span>
+                </div>
+              </div>
+
+              <div class="file-switch" role="tablist" aria-label="Inspect repository scope or file">
+                <button type="button" class="file-btn" role="tab" aria-selected="true" data-det-file="repo">
+                  Full repository
+                </button>
+                <button type="button" class="file-btn" role="tab" aria-selected="false" data-det-file="router">
+                  src/router.py
+                </button>
+                <button type="button" class="file-btn" role="tab" aria-selected="false" data-det-file="parser">
+                  src/parser.py
+                </button>
+                <button type="button" class="file-btn" role="tab" aria-selected="false" data-det-file="metadata">
+                  CLAUDE.md
+                </button>
+              </div>
+
+              <div class="code-lines" id="detector-code" aria-live="polite"></div>
+            </div>
+
+            <aside class="wb-margin" aria-live="polite" aria-label="Detector signal note">
+              <div>
+                <div class="margin-top">
+                  <span class="status-dot" id="det-file-tag" data-tone="red">Estimate · Not proof</span>
+                  <span class="margin-id" id="det-file-weight">range 0.47 – 0.77</span>
+                </div>
+
+                <div class="margin-figure" id="det-file-title">Repository summary</div>
+                <p class="margin-desc" id="det-file-desc">
+                  Clean human code can look machine-made, and edited AI code can look human. Use the estimate to start a conversation, never as proof.
+                </p>
+
+                <div class="proof-row">
+                  <div class="proof-head">
+                    <span class="proof-label">Why this moved the needle</span>
+                  </div>
+                  <pre class="proof-code" id="det-file-reason">The model only cites line numbers. margin copies every quoted line verbatim from disk so evidence cannot be invented.</pre>
+                </div>
+
+                <div class="proof-row">
+                  <div class="proof-head">
+                    <span class="proof-label">Safety boundary</span>
+                    <span class="proof-val">Read-only</span>
+                  </div>
+                  <pre class="proof-code">Files are read as plain text. No setup.py, git hooks, or external helpers execute.</pre>
+                </div>
+              </div>
+
+              <div class="margin-foot">
+                <span>Metadata reported, never scored</span>
+                <span>detector-0.2.2</span>
+              </div>
+            </aside>
+          </div>
+
+          <!-- Panel 3: Commit Graph -->
+          <div
+            class="wb-split"
+            id="panel-commit-graph"
+            role="tabpanel"
+            aria-labelledby="tab-commit-graph"
+            hidden
+          >
+            <div class="wb-stage">
+              <div class="cg-filters" role="tablist" aria-label="Filter commits">
+                <button type="button" class="file-btn" role="tab" aria-selected="true" data-cg-filter="all">
+                  All commits (5)
+                </button>
+                <button type="button" class="file-btn" role="tab" aria-selected="false" data-cg-filter="flagged">
+                  Flagged fixes (2)
+                </button>
+              </div>
+
+              <div class="cg-rows" id="commit-list" role="listbox" aria-label="Repository commits"></div>
+            </div>
+
+            <aside class="wb-margin" aria-live="polite" aria-label="Commit margin note">
+              <div>
+                <div class="margin-top">
+                  <span class="status-dot" id="cg-tag" data-tone="blue">Chapter 05</span>
+                  <span class="margin-id" id="cg-stats">8 files · +2520 / -16</span>
+                </div>
+
+                <div class="margin-figure" id="cg-sha">7d37898</div>
+                <p class="margin-desc" id="cg-summary">
+                  Added Power BI project (.pbip) export to Data Storyteller alongside 1,041 lines of schema and layout tests.
+                </p>
+
+                <div class="proof-row">
+                  <div class="proof-head">
+                    <span class="proof-label">Files touched</span>
+                  </div>
+                  <pre class="proof-code" id="cg-files">agents/data_storyteller/src/data_storyteller/pbip.py
+agents/data_storyteller/tests/test_pbip.py
+agents/data_storyteller/src/data_storyteller/report.py</pre>
+                </div>
+
+                <div class="proof-row">
+                  <div class="proof-head">
+                    <span class="proof-label">Chapter</span>
+                    <span class="proof-val" id="cg-chapter">Exports &amp; publishing</span>
+                  </div>
+                  <pre class="proof-code" id="cg-note">Lanes stay in ink; red only marks reverts and quick fixes.</pre>
+                </div>
+              </div>
+
+              <div class="margin-foot">
+                <span>Exports Margin.history.svg</span>
+                <span>Read-only git config</span>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <!-- Guarantees (Pure white, flat ruled table) -->
+      <section class="section" id="guarantees">
+        <div class="wrap">
+          <div class="section-header">
+            <h2 class="section-title">Why you can check its work.</h2>
+            <p class="section-sub">
+              Every guarantee is enforced in code so an agent never asks you to trust a number or claim you cannot trace back to its source.
+            </p>
+          </div>
+
+          <div class="guarantees">
+            <div class="g-row">
+              <h3 class="g-title">Code computes the numbers</h3>
+              <p class="g-body">
+                A model never invents a statistic. The storyteller writer can only reference facts by name, and each fact is computed twice — once in pandas and once in separate SQL. If they disagree, the run fails.
+              </p>
+              <div class="g-proof">
+                <div>pandas: 115286.00</div>
+                <div>duckdb: 115286.00</div>
+                <div class="accent-blue">match: verified (Δ = 0)</div>
+              </div>
+            </div>
+
+            <div class="g-row">
+              <h3 class="g-title">You make the judgement calls</h3>
+              <p class="g-body">
+                Is <code>05/02/2026</code> May or February? The file cannot say. An agent stops and asks you; pass <code>assume_defaults=true</code> and every guess stays in the report, flagged in red as unconfirmed.
+              </p>
+              <div class="g-proof" data-tone="red">
+                <div>row 4: 05/02/2026 → 2026-05-02</div>
+                <div class="accent-red">assumed, not confirmed: month first</div>
+              </div>
+            </div>
+
+            <div class="g-row">
+              <h3 class="g-title">Strange repositories stay inert</h3>
+              <p class="g-body">
+                Point margin at any GitHub URL or local folder. Files are read and never executed, and git is locked down with read-only configuration so a hostile repository cannot trigger hooks or helpers.
+              </p>
+              <div class="g-proof">
+                <div>core.hooksPath=/dev/null</div>
+                <div>core.fsmonitor=false</div>
+                <div class="accent-blue">0 repository hooks executed</div>
+              </div>
+            </div>
+
+            <div class="g-row">
+              <h3 class="g-title">Your data stays on your computer</h3>
+              <p class="g-body">
+                Agents default to local Ollama (<code>qwen3.5:9b</code>, fits on an 8 GB GPU) or run with no model at all. Switch to Anthropic or OpenAI only when you choose — and the storyteller never sends raw data rows.
+              </p>
+              <div class="g-proof">
+                <div>default: localhost:11434</div>
+                <div>model: qwen3.5:9b or none</div>
+                <div class="accent-blue">0 data rows sent to hosted APIs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Agents Directory (Flat tonal band, zero cards) -->
+      <section class="section band-surface" id="agents">
+        <div class="wrap">
+          <div class="section-header">
+            <h2 class="section-title">Five agents. One package per job.</h2>
+            <p class="section-sub">
+              Install only what you need. The CLI, HTTP API, and web UI discover whatever is installed in your environment automatically.
+            </p>
+          </div>
+
+          <div class="agents-list">
+            <article class="agent-row">
+              <div>
+                <h3 class="agent-name">Data Storyteller</h3>
+                <div class="agent-meta"><span class="live">PyPI</span> · Experimental · No model required</div>
+              </div>
+              <p class="agent-desc">
+                Cleans messy CSVs and spreadsheets, accounts for every changed cell, computes every fact twice in pandas and DuckDB SQL, writes the story with charts, and exports clean CSVs or Power BI <code>.pbip</code> projects.
+              </p>
+              <div class="agent-right">
+                <div class="agent-cmd">
+                  <code>pip install margin-cli margin-data-storyteller</code>
+                  <button type="button" class="copy-link" data-copy="pip install margin-cli margin-data-storyteller">Copy</button>
+                </div>
+                <a class="agent-doc" href="https://github.com/Waddah0-0/margin/blob/main/agents/data_storyteller/README.md" target="_blank" rel="noopener">Documentation ↗</a>
+              </div>
+            </article>
+
+            <article class="agent-row">
+              <div>
+                <h3 class="agent-name">AI Code Detector</h3>
+                <div class="agent-meta"><span class="live">PyPI</span> · Experimental · GitHub URL or path</div>
+              </div>
+              <p class="agent-desc">
+                Estimates how likely a codebase was written with AI assistance as a plausible range with a confidence level, backed by verbatim quoted lines and commit-level evidence for and against.
+              </p>
+              <div class="agent-right">
+                <div class="agent-cmd">
+                  <code>pip install margin-cli margin-ai-code-detector</code>
+                  <button type="button" class="copy-link" data-copy="pip install margin-cli margin-ai-code-detector">Copy</button>
+                </div>
+                <a class="agent-doc" href="https://github.com/Waddah0-0/margin/blob/main/agents/ai_code_detector/README.md" target="_blank" rel="noopener">Documentation ↗</a>
+              </div>
+            </article>
+
+            <article class="agent-row">
+              <div>
+                <h3 class="agent-name">Commit Graph</h3>
+                <div class="agent-meta"><span class="live">PyPI</span> · Experimental · SVG, Markdown, JSON</div>
+              </div>
+              <p class="agent-desc">
+                Draws a repository's history as a readable ink-lane SVG tree and groups its evolution into narrative chapters, margin notes beside commits, and the files that keep changing.
+              </p>
+              <div class="agent-right">
+                <div class="agent-cmd">
+                  <code>pip install margin-cli margin-commit-graph</code>
+                  <button type="button" class="copy-link" data-copy="pip install margin-cli margin-commit-graph">Copy</button>
+                </div>
+                <a class="agent-doc" href="https://github.com/Waddah0-0/margin/blob/main/agents/commit_graph/README.md" target="_blank" rel="noopener">Documentation ↗</a>
+              </div>
+            </article>
+
+            <article class="agent-row">
+              <div>
+                <h3 class="agent-name">Secret Leaks</h3>
+                <div class="agent-meta">Experimental · No model required</div>
+              </div>
+              <p class="agent-desc">
+                Scans workspace files and full git history for hardcoded secrets, API keys, private keys, and credentials — reporting exact locations with strictly redacted previews.
+              </p>
+              <div class="agent-right">
+                <div class="agent-cmd">
+                  <code>margin run secret-leaks .</code>
+                  <button type="button" class="copy-link" data-copy="margin run secret-leaks .">Copy</button>
+                </div>
+                <a class="agent-doc" href="https://github.com/Waddah0-0/margin/blob/main/agents/secret_leaks/README.md" target="_blank" rel="noopener">Documentation ↗</a>
+              </div>
+            </article>
+
+            <article class="agent-row">
+              <div>
+                <h3 class="agent-name">Echo</h3>
+                <div class="agent-meta"><span class="live">Ready</span> · Starter template · No model</div>
+              </div>
+              <p class="agent-desc">
+                Repeats what you give it. Included as a smoke test for the CLI, API, and web UI — and as the reference template to copy when writing your own agent.
+              </p>
+              <div class="agent-right">
+                <div class="agent-cmd">
+                  <code>margin run echo "hello" --set repeat=2</code>
+                  <button type="button" class="copy-link" data-copy='margin run echo "hello" --set repeat=2'>Copy</button>
+                </div>
+                <a class="agent-doc" href="https://github.com/Waddah0-0/margin/blob/main/docs/writing-an-agent.md" target="_blank" rel="noopener">Write your own ↗</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Local Web UI Showcase (Clean full-width, zero fake chrome) -->
+      <section class="section" id="interface">
+        <div class="wrap">
+          <div class="ui-head">
+            <div class="ui-head-copy">
+              <h2 class="section-title">Ruled like a sheet of paper.</h2>
+              <p>Start <code>margin-api</code> locally for forms, live progress, questions, and downloadable reports.</p>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Local web UI views">
+              <button type="button" class="tab-btn" role="tab" aria-selected="true" data-ui-tab="storyteller">Data Storyteller</button>
+              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-ui-tab="detector">AI Code Detector</button>
+              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-ui-tab="commit-graph">Commit Graph</button>
+              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-ui-tab="home">Home</button>
+            </div>
+          </div>
+
+          <figure class="ui-figure">
+            <img
+              id="ui-screenshot"
+              class="ui-shot"
+              src="./images/ui-storyteller.webp"
+              alt="Data Storyteller view in the margin web UI showing underlined numbers and a monthly revenue chart."
+              loading="lazy"
+            />
+            <figcaption class="ui-caption">
+              <span id="ui-caption">Every underlined number opens its pandas + SQL receipt, alongside clean CSV, JSON, and Markdown exports.</span>
+              <code id="ui-url">http://127.0.0.1:8000/runs/3d4a1f27</code>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Ways to Run (Flat band, Google Docs left rail) -->
+      <section class="section band-surface" id="run">
+        <div class="wrap">
+          <div class="section-header">
+            <h2 class="section-title">Terminal, browser, Docker, or Python.</h2>
+            <p class="section-sub">
+              Every interface talks to the same agent registry. Reports write to stdout and logs write to stderr so CLI output is always safe to pipe.
+            </p>
+          </div>
+
+          <div class="run-grid">
+            <div class="run-rail" role="tablist" aria-label="Ways to run margin">
+              <button type="button" class="run-item" role="tab" aria-selected="true" data-run-tab="cli">
+                <span class="run-item-name">Terminal</span>
+                <span class="run-item-sub">Pipeable stdout, JSON &amp; Markdown</span>
+              </button>
+              <button type="button" class="run-item" role="tab" aria-selected="false" data-run-tab="web">
+                <span class="run-item-name">Web UI &amp; HTTP API</span>
+                <span class="run-item-sub">Local forms and OpenAPI /docs</span>
+              </button>
+              <button type="button" class="run-item" role="tab" aria-selected="false" data-run-tab="docker">
+                <span class="run-item-name">Docker</span>
+                <span class="run-item-sub">Single container + local Ollama</span>
+              </button>
+              <button type="button" class="run-item" role="tab" aria-selected="false" data-run-tab="python">
+                <span class="run-item-name">From Python</span>
+                <span class="run-item-sub">Typed async API</span>
+              </button>
+              <button type="button" class="run-item" role="tab" aria-selected="false" data-run-tab="custom">
+                <span class="run-item-name">Write your own</span>
+                <span class="run-item-sub">One class, auto CLI &amp; UI</span>
+              </button>
+            </div>
+
+            <div class="code-surface">
+              <div class="code-surface-head">
+                <span id="run-filename">terminal</span>
+                <button type="button" class="copy-link" id="run-copy-btn" data-copy="">Copy</button>
+              </div>
+              <pre><code id="run-code"></code></pre>
+              <div class="code-surface-note" id="run-note"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Closing -->
+      <section class="wrap closing">
+        <h2>Start with one file or one repository.</h2>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/Waddah0-0/margin" target="_blank" rel="noopener">
+            View on GitHub <span aria-hidden="true">↗</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/Waddah0-0/margin/blob/main/docs/writing-an-agent.md" target="_blank" rel="noopener">
+            Write an agent <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img class="brand-mark" src="./images/mark.svg" width="20" height="20" alt="" />
+          <span>Notes written in the margin of your work.</span>
+        </div>
+
+        <div class="footer-links">
+          <a href="https://github.com/Waddah0-0/margin" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://pypi.org/project/margin-cli/" target="_blank" rel="noopener">PyPI</a>
+          <a href="https://github.com/Waddah0-0/margin/blob/main/docs/writing-an-agent.md" target="_blank" rel="noopener">Writing an agent</a>
+          <a href="https://github.com/Waddah0-0/margin/blob/main/docs/methodology.md" target="_blank" rel="noopener">Methodology</a>
+          <a href="https://github.com/Waddah0-0/margin/blob/main/docs/security.md" target="_blank" rel="noopener">Security</a>
+          <a href="https://github.com/Waddah0-0/margin/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a>
+        </div>
+      </div>
+    </footer>
+
+    <div class="sr-only" aria-live="polite" id="copy-announcer"></div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
