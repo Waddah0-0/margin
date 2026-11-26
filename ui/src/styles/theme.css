@@ -6,19 +6,19 @@
   color-scheme: light dark;
 
   /* paper: the page, things lifted off it (inputs, code, drawers), things pressed into it */
-  --paper: light-dark(#f5f5f1, #121211);
-  --paper-raised: light-dark(#ffffff, #1a1a18);
-  --paper-sunk: light-dark(#ebebe5, #20201e);
+  --paper: light-dark(#f5f5f1, #000000);
+  --paper-raised: light-dark(#ffffff, #0a0a0c);
+  --paper-sunk: light-dark(#ebebe5, #121215);
 
   /* ink: text, in three strengths, and the fill of the one primary action */
-  --ink: light-dark(#141413, #ecece6);
-  --ink-2: light-dark(#4b4b46, #b0b0a7);
-  --ink-3: light-dark(#6e6e67, #96968c);
+  --ink: light-dark(#141413, #f5f5f7);
+  --ink-2: light-dark(#4b4b46, #a1a1a6);
+  --ink-3: light-dark(#6e6e67, #78787f);
   --on-ink: var(--paper);
 
   /* rules: hairlines between things, and the firmer line around a control */
-  --rule: light-dark(#d8d8cf, #30302d);
-  --rule-2: light-dark(#b4b4aa, #4d4d48);
+  --rule: light-dark(#d8d8cf, #1e1e22);
+  --rule-2: light-dark(#b4b4aa, #34343a);
 
   /* the pencil */
   --red: light-dark(#c8321f, #ff7059);
@@ -27,10 +27,10 @@
   --blue-tint: light-dark(rgb(38 71 216 / 0.09), rgb(143 168 255 / 0.16));
 
   /* the ruled line every page hangs from */
-  --margin-line: light-dark(rgb(200 50 31 / 0.5), rgb(255 112 89 / 0.42));
+  --margin-line: light-dark(rgb(200 50 31 / 0.5), rgb(255 112 89 / 0.38));
 
-  /* a faint warm light low on the page, like a desk lamp on paper; never red or blue */
-  --lamp: light-dark(rgb(214 176 112 / 0.1), rgb(214 176 112 / 0.045));
+  /* a faint warm light low on the page in light mode; pure deep black in dark mode */
+  --lamp: light-dark(rgb(214 176 112 / 0.1), rgb(0 0 0 / 0));
 
   --shadow-pop: light-dark(
     0 12px 32px rgb(20 20 19 / 0.14), 0 2px 6px rgb(20 20 19 / 0.08),
