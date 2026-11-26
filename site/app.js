@@ -232,6 +232,9 @@
       return Math.round(ratio * (series.length - 1));
     }
 
+    chartSvg.addEventListener("pointerdown", function (e) {
+      setActive(indexFromClientX(e.clientX));
+    });
     chartSvg.addEventListener("pointermove", function (e) {
       setActive(indexFromClientX(e.clientX));
     });

@@ -86,6 +86,7 @@ body {
   line-height: 1.58;
   color: var(--ink);
   background: var(--bg);
+  overflow-x: clip;
 }
 
 img,
@@ -340,6 +341,18 @@ pre {
   font-size: 13px;
   color: var(--ink);
   white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+}
+
+.install-line code::-webkit-scrollbar,
+.tabs::-webkit-scrollbar,
+.file-switch::-webkit-scrollbar,
+.run-rail::-webkit-scrollbar,
+.agent-cmd code::-webkit-scrollbar,
+.code-surface pre::-webkit-scrollbar {
+  display: none;
 }
 
 .install-line .prompt {
@@ -442,11 +455,13 @@ pre {
 }
 
 .wb-stage {
+  min-width: 0;
   padding: 40px 48px 48px 0;
   border-right: 1px solid var(--margin-rule);
 }
 
 .wb-margin {
+  min-width: 0;
   padding: 40px 0 48px 40px;
   display: flex;
   flex-direction: column;
@@ -1082,6 +1097,7 @@ pre {
 }
 
 .agent-right {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -1090,6 +1106,7 @@ pre {
 
 .agent-cmd {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1102,6 +1119,9 @@ pre {
   font-size: 12.5px;
   color: var(--ink);
   white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
 }
 
 .agent-doc {
@@ -1222,6 +1242,7 @@ pre {
 }
 
 .code-surface {
+  min-width: 0;
   background: var(--bg);
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--hairline);
@@ -1241,7 +1262,10 @@ pre {
 .code-surface pre {
   margin: 0;
   padding: 24px 0;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   font-size: 13.5px;
   line-height: 1.72;
   color: var(--ink);
@@ -1330,15 +1354,50 @@ pre {
   color: var(--ink);
 }
 
-/* ---- Responsive ------------------------------------------------------------------------- */
+/* ---- Responsive (Tablets & Phones) ------------------------------------------------------ */
+
+@media (max-width: 1140px) {
+  .agent-row {
+    grid-template-columns: minmax(180px, 0.44fr) minmax(0, 1fr);
+    gap: 14px 36px;
+  }
+
+  .agent-right {
+    grid-column: 2;
+    align-items: flex-start;
+  }
+
+  .agent-cmd {
+    max-width: 520px;
+  }
+}
 
 @media (max-width: 1020px) {
+  .topbar-left {
+    gap: 24px;
+  }
+
+  .nav {
+    gap: 18px;
+  }
+
+  .wb-cmd {
+    display: none;
+  }
+
   .section-header,
   .wb-split,
-  .g-row,
-  .agent-row,
   .run-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .g-row {
+    grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.85fr);
+    gap: 12px 32px;
+  }
+
+  .g-title {
+    grid-column: 1 / -1;
   }
 
   .wb-stage {
@@ -1351,64 +1410,305 @@ pre {
     padding: 32px 0 40px;
   }
 
-  .agent-right {
-    align-items: flex-start;
-  }
-
   .run-rail {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     border-left: 0;
     border-bottom: 1px solid var(--hairline);
-    gap: 6px 22px;
+    gap: 24px;
   }
 
   .run-item {
-    padding: 12px 0;
+    padding: 14px 0;
     white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .run-item-sub {
+    display: none;
   }
 
   .run-item[aria-selected="true"]::before {
     left: 0;
     right: 0;
     top: auto;
-    bottom: -1px;
+    bottom: 0;
     width: auto;
     height: 2px;
   }
+
+  .ui-head {
+    gap: 8px 32px;
+  }
+
+  .ui-head-copy {
+    padding-bottom: 12px;
+  }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 720px) {
   .nav {
     display: none;
+  }
+
+  .agent-row {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0;
+    padding: 24px 0;
+    gap: 12px;
+  }
+
+  .agent-right {
+    grid-column: 1;
+  }
+
+  .agent-cmd {
+    max-width: none;
+  }
+
+  .hero {
+    padding: 52px 0 44px;
+  }
+
+  .hero-title {
+    font-size: clamp(2.2rem, 9.2vw, 3.35rem);
+    line-height: 1.06;
+  }
+
+  .hero-lead {
+    margin-top: 18px;
+    font-size: 16px;
+    line-height: 1.54;
+  }
+
+  .hero-actions {
+    margin-top: 26px;
+    gap: 10px;
+  }
+
+  .install-line {
+    margin-top: 24px;
+    gap: 10px;
+    padding: 10px 0;
+  }
+
+  .install-line code {
+    font-size: 12px;
+  }
+
+  .section {
+    padding: 56px 0;
+  }
+
+  .section-header {
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .section-sub {
+    font-size: 15.5px;
   }
 
   .wb-cmd {
     display: none;
   }
 
-  .install-line code,
-  .agent-cmd code {
-    white-space: normal;
-    word-break: break-word;
-  }
-
   .tabs {
-    gap: 6px 18px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 18px;
+    width: 100%;
   }
 
   .tab-btn {
     font-size: 13.5px;
-    padding: 14px 0;
+    padding: 15px 0;
+    flex-shrink: 0;
   }
 
+  .wb-stage {
+    padding: 26px 0 28px;
+  }
+
+  .wb-margin {
+    padding: 26px 0 32px;
+  }
+
+  .metric-strip {
+    gap: 6px 16px;
+    margin-bottom: 16px;
+  }
+
+  .metric-meta {
+    font-size: 12.5px;
+  }
+
+  .chart-stage {
+    margin-bottom: 24px;
+  }
+
+  .story-prose {
+    font-size: 1.06rem;
+    line-height: 1.62;
+  }
+
+  .export-line {
+    margin-top: 20px;
+    gap: 6px 14px;
+    font-size: 12px;
+  }
+
+  .margin-top,
+  .margin-foot {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  .file-switch {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 18px;
+    margin: 22px 0 16px;
+  }
+
+  .file-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .ruler-ends {
+    font-size: 11.5px;
+    gap: 12px;
+  }
+
+  .g-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 28px 0;
+  }
+
+  .g-body {
+    font-size: 15px;
+  }
+
+  .agent-row:hover {
+    background: transparent;
+  }
+
+  .agent-desc {
+    font-size: 15px;
+  }
+
+  .agent-cmd code {
+    font-size: 12px;
+  }
+
+  .ui-head-copy p {
+    font-size: 15px;
+  }
+
+  .ui-caption {
+    font-size: 13.5px;
+  }
+
+  .run-rail {
+    gap: 18px;
+  }
+
+  .run-item-name {
+    font-size: 14px;
+  }
+
+  .code-surface pre {
+    padding: 18px 0;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  .closing {
+    padding: 88px 20px;
+    gap: 28px;
+  }
+
+  .footer {
+    padding: 28px 0 36px;
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .footer-links {
+    gap: 10px 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .wrap {
+    padding: 0 16px;
+  }
+
+  .btn {
+    height: 42px;
+    padding: 0 18px;
+    font-size: 14px;
+  }
+
+  .tabs {
+    gap: 14px;
+  }
+
+  .tab-btn {
+    font-size: 13px;
+  }
+
+  /* Fold the code margin above its line on small phones, matching margin's design rules */
   .code-line {
-    grid-template-columns: 88px 28px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr);
+    padding: 4px 0;
     font-size: 11.5px;
   }
 
+  .cl-note {
+    grid-column: 1 / -1;
+    border-right: 0;
+    text-align: left;
+    padding: 0 0 2px 28px;
+    font-size: 11px;
+  }
+
+  .cl-note:empty {
+    display: none;
+  }
+
+  .cl-num {
+    padding: 0 8px 0 0;
+  }
+
   .cg-row {
-    grid-template-columns: 44px 66px minmax(0, 1fr);
+    grid-template-columns: 44px 62px minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px 4px;
+  }
+
+  .cg-msg {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 350px) {
+  .hero-actions .btn,
+  .closing .hero-actions .btn {
+    width: 100%;
   }
 }
 
