@@ -821,12 +821,23 @@
       html:
         '<span class="c-cm"># Install the CLI and any agents you want</span>\n' +
         "pip install margin-cli margin-data-storyteller\n\n" +
-        "margin list                         " +
-        '<span class="c-cm"># what is installed</span>\n' +
-        "margin info data-storyteller        " +
-        '<span class="c-cm"># inspect inputs and options</span>\n' +
-        "margin run data-storyteller sales.csv --format json --out report.json",
+        '<span class="c-cm"># Inspect installed agents and run one</span>\n' +
+        "margin list\n" +
+        "margin info data-storyteller\n" +
+        "margin run data-storyteller sales.csv \\\n" +
+        "  --format json --out report.json",
       note: "Reports write to stdout and logs write to stderr, so CLI output is always safe to pipe into jq or scripts.",
+    },
+    windows: {
+      filename: "windows desktop app",
+      raw: "uv run python desktop/build_windows.py",
+      html:
+        '<span class="c-cm"># Download margin-setup.exe from GitHub Releases</span>\n' +
+        '<span class="c-cm"># or build the standalone installer locally:</span>\n' +
+        "uv run python desktop/build_windows.py\n\n" +
+        '<span class="c-cm"># Bundles Python, all agents, and the web UI</span>\n' +
+        '<span class="c-cm"># in Edge WebView2 with built-in updates.</span>',
+      note: "No Python install needed. Uses your system git for repository agents and falls back gracefully if git is missing.",
     },
     web: {
       filename: "local web server",
@@ -834,20 +845,19 @@
       html:
         '<span class="c-cm"># Start the bundled web UI and HTTP API</span>\n' +
         "pip install margin-api\n" +
-        "margin-api                          " +
-        '<span class="c-cm"># open http://127.0.0.1:8000</span>\n\n' +
-        '<span class="c-cm"># OpenAPI documentation is served at /docs</span>',
+        "margin-api\n\n" +
+        '<span class="c-cm"># Open http://127.0.0.1:8000 (OpenAPI at /docs)</span>',
       note: "Gives you an auto-generated form for every installed agent, live progress, interactive questions, and downloadable results.",
     },
     docker: {
       filename: "docker compose",
       raw: "git clone https://github.com/Waddah0-0/margin.git\ncd margin\ndocker compose up",
       html:
-        '<span class="c-cm"># Run the API and web UI in one container using local Ollama</span>\n' +
+        '<span class="c-cm"># Run the API and UI with local Ollama</span>\n' +
         "git clone https://github.com/Waddah0-0/margin.git\n" +
         "cd margin\n" +
-        "docker compose up                   " +
-        '<span class="c-cm"># open http://localhost:8000</span>',
+        "docker compose up\n\n" +
+        '<span class="c-cm"># Open http://localhost:8000</span>',
       note: "Listens only on localhost, runs non-root, and mounts your workspace read-only at /workspace.",
     },
     python: {

@@ -1243,7 +1243,7 @@ pre {
 
 .code-surface {
   min-width: 0;
-  background: var(--bg);
+  background: transparent;
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--hairline);
 }
@@ -1633,12 +1633,19 @@ pre {
   }
 
   .closing {
-    padding: 88px 20px;
+    padding: 96px 28px;
     gap: 28px;
   }
 
+  .closing h2 {
+    font-size: clamp(1.85rem, 6.6vw, 2.45rem);
+    max-width: 17ch;
+    text-wrap: balance;
+    line-height: 1.12;
+  }
+
   .footer {
-    padding: 28px 0 36px;
+    padding: 32px 0 40px;
   }
 
   .footer-inner {
@@ -1654,7 +1661,12 @@ pre {
 
 @media (max-width: 520px) {
   .wrap {
-    padding: 0 16px;
+    padding: 0 22px;
+  }
+
+  .closing {
+    padding: 88px 28px;
+    gap: 26px;
   }
 
   .btn {

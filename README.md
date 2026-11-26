@@ -14,6 +14,7 @@
 </p>
 
 <p align="center">
+  <a href="https://waddah0-0.github.io/margin/">Website</a> ·
   <a href="#try-it">Try it</a> ·
   <a href="#agents">Agents</a> ·
   <a href="#ways-to-run-it">Ways to run it</a> ·
@@ -88,7 +89,7 @@ number is a button that opens the fact behind it:
 
 | Agent | What it does | State |
 |---|---|---|
-| [Data Storyteller](agents/data_storyteller/README.md) | Cleans a table of data, explains every change, and writes the story in it, every number checked. | Experimental |
+| [Data Storyteller](agents/data_storyteller/README.md) | Cleans a table of data, explains every change, writes the story in it (every number checked), and exports Power BI `.pbip` projects. | Experimental |
 | [AI Code Detector](agents/ai_code_detector/README.md) | Estimates how likely a codebase was written with AI assistance, and shows the evidence. | Experimental |
 | [Echo](agents/echo/README.md) | Repeats what you tell it. It's here for testing, and for copying when you write your own. | Ready |
 | [Commit Graph](agents/commit_graph/README.md) | Draws a repository's history as its tree and tells the story in it: chapters, notes beside the commits, and the files that keep changing. | Experimental |
@@ -132,6 +133,20 @@ margin run data-storyteller sales.csv --format json --out report.json
 
 Reports go to stdout and everything else to stderr, so output is safe to pipe.
 [The CLI's README](packages/cli/README.md) has every option and exit code.
+
+**As a Windows desktop app**
+
+Download `margin-setup-<version>.exe` from [GitHub Releases](https://github.com/Waddah0-0/margin/releases),
+or build it locally from this repository:
+
+```powershell
+uv run python desktop/build_windows.py
+```
+
+The installer bundles Python, the web UI, and all agents in a native Edge WebView2 window — no
+Python setup required. Repository agents use your system `git` (and show a friendly banner if
+`git` isn't installed, leaving Data Storyteller usable), and a quiet **Update** button appears in
+the top bar when a newer GitHub release is out ([details](desktop/README.md)).
 
 **In the browser**
 
@@ -301,6 +316,8 @@ uv sync --all-packages
 | [`packages/cli`](packages/cli/README.md) | The `margin` command. |
 | [`packages/api`](packages/api/README.md) | The HTTP server: background runs, live progress, questions, uploads. |
 | [`ui/`](ui/README.md) | The web UI, a client of the API ([design rules](ui/DESIGN.md)). |
+| [`desktop/`](desktop/README.md) | The Windows desktop app (`pywebview` launcher, PyInstaller spec, Inno Setup script, build tool). |
+| `site/` | The static landing page published to [GitHub Pages](https://waddah0-0.github.io/margin/). |
 | `agents/` | One folder per agent, each a self-contained package. |
 | `examples/` | A runnable script and the sample file above. |
 | `scripts/` | Workspace tools: create and check agents, mirror them, type-check, build a release. |

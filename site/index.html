@@ -603,7 +603,7 @@ agents/data_storyteller/src/data_storyteller/report.py</pre>
       <section class="section band-surface" id="run">
         <div class="wrap">
           <div class="section-header">
-            <h2 class="section-title">Terminal, browser, Docker, or Python.</h2>
+            <h2 class="section-title">Terminal, Windows app, browser, or Python.</h2>
             <p class="section-sub">
               Every interface talks to the same agent registry. Reports write to stdout and logs write to stderr so CLI output is always safe to pipe.
             </p>
@@ -614,6 +614,10 @@ agents/data_storyteller/src/data_storyteller/report.py</pre>
               <button type="button" class="run-item" role="tab" aria-selected="true" data-run-tab="cli">
                 <span class="run-item-name">Terminal</span>
                 <span class="run-item-sub">Pipeable stdout, JSON &amp; Markdown</span>
+              </button>
+              <button type="button" class="run-item" role="tab" aria-selected="false" data-run-tab="windows">
+                <span class="run-item-name">Windows app</span>
+                <span class="run-item-sub">Standalone installer, auto-updates</span>
               </button>
               <button type="button" class="run-item" role="tab" aria-selected="false" data-run-tab="web">
                 <span class="run-item-name">Web UI &amp; HTTP API</span>
@@ -668,6 +672,7 @@ agents/data_storyteller/src/data_storyteller/report.py</pre>
 
         <div class="footer-links">
           <a href="https://github.com/Waddah0-0/margin" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/Waddah0-0/margin/releases" target="_blank" rel="noopener">Releases</a>
           <a href="https://pypi.org/project/margin-cli/" target="_blank" rel="noopener">PyPI</a>
           <a href="https://github.com/Waddah0-0/margin/blob/main/docs/writing-an-agent.md" target="_blank" rel="noopener">Writing an agent</a>
           <a href="https://github.com/Waddah0-0/margin/blob/main/docs/methodology.md" target="_blank" rel="noopener">Methodology</a>
