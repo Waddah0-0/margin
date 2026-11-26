@@ -153,13 +153,14 @@ class UpdateChecker:
     ) -> None:
         self.current_version = current_version
         self.repo = repo or os.environ.get("MARGIN_UPDATE_REPO") or DEFAULT_UPDATE_REPO
+        self._custom_fetcher = fetcher is not None
         self._fetcher = fetcher or _fetch_latest_github_release
         self._ttl_s = ttl_s
         self._cached: UpdateStatus | None = None
         self._cached_at: float = 0.0
 
     def check(self, *, force: bool = False, can_install: bool = False) -> UpdateStatus:
-        if os.environ.get("MARGIN_DISABLE_UPDATE_CHECK") == "1":
+        if not self._custom_fetcher and os.environ.get("MARGIN_DISABLE_UPDATE_CHECK") == "1":
             return UpdateStatus(current_version=self.current_version, can_install=False)
 
         now = time.monotonic()

@@ -157,3 +157,11 @@ def test_download_installer_verifies_sha256_and_triggers_callback(
         assert res.json()["version"] == "0.2.0"
         assert len(launched) == 1
         assert launched[0].read_bytes() == payload
+
+
+def test_env_flag_disables_default_network_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MARGIN_DISABLE_UPDATE_CHECK", "1")
+    checker = UpdateChecker(current_version="0.1.3")
+    status = checker.check()
+    assert status.update_available is False
+    assert status.latest_version is None
