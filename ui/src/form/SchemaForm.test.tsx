@@ -12,6 +12,7 @@ const agent: AgentInfo = {
   version: "0.1.0",
   primary_input: "message",
   uses_llm: false,
+  requires_git: false,
   input_schema: {
     properties: {
       repeat: { default: 1, maximum: 10, minimum: 1, type: "integer", description: "How many times." },

@@ -1,0 +1,15 @@
+.banner {
+  background: var(--red-tint);
+}
+
+.text {
+  max-width: var(--measure);
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--ink);
+}
+
+.text strong {
+  font-weight: 600;
+  color: var(--red);
+}

@@ -1,6 +1,7 @@
 import { useAgents } from "../api/hooks";
 import { AgentIndex } from "../components/AgentIndex";
 import { Block, ListHead } from "../components/Block";
+import { GitMissingBanner } from "../components/GitMissingBanner";
 import { PageLoading } from "../components/Loading";
 import { PageHead } from "../components/PageHead";
 import { EmptyState, ErrorState } from "../components/States";
@@ -11,6 +12,8 @@ export function AgentsPage() {
   usePageTitle("Agents");
   const agents = useAgents();
   const list = agents.data?.agents ?? [];
+  const gitAvailable = agents.data?.git_available ?? true;
+  const showGitWarning = !gitAvailable && list.some((a) => a.requires_git);
   const failed = Object.entries(agents.data?.load_errors ?? {});
 
   return (
@@ -19,6 +22,8 @@ export function AgentsPage() {
         title="Agents"
         lede="Every agent installed alongside the API. Each one takes typed input and returns a result with its evidence."
       />
+
+      {showGitWarning && <GitMissingBanner />}
 
       {agents.loading && !agents.data && <PageLoading label="Loading agents" />}
       {agents.error && <ErrorState error={agents.error} onRetry={agents.reload} />}
@@ -47,7 +52,7 @@ export function AgentsPage() {
       {list.length > 0 && (
         <section className={styles.section}>
           <ListHead label="Installed" count={list.length} />
-          <AgentIndex agents={list} />
+          <AgentIndex agents={list} gitAvailable={gitAvailable} />
         </section>
       )}
     </>

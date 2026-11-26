@@ -19,18 +19,31 @@ export function agentSpec(agent: AgentInfo): { takes?: string; options: number }
   };
 }
 
-export function AgentIndex({ agents }: { agents: AgentInfo[] }) {
+export function AgentIndex({ agents, gitAvailable = true }: { agents: AgentInfo[]; gitAvailable?: boolean }) {
   return (
     <ol className={styles.list}>
       {agents.map((agent, i) => {
         const spec = agentSpec(agent);
+        const needsGit = Boolean(agent.requires_git) && !gitAvailable;
         return (
           <li key={agent.id}>
-            <Link to={`/agents/${agent.id}`} className={`m-grid ${styles.row}`} viewTransition>
+            <Link
+              to={`/agents/${agent.id}`}
+              className={`m-grid ${styles.row}`}
+              data-unavailable={needsGit || undefined}
+              viewTransition
+            >
               <span className={`m-note ${styles.no}`}>{String(i + 1).padStart(2, "0")}</span>
               <span className={styles.body}>
                 <span className={styles.text}>
-                  <span className={styles.name}>{agent.name}</span>
+                  <span className={styles.nameRow}>
+                    <span className={styles.name}>{agent.name}</span>
+                    {needsGit && (
+                      <span className="tag" data-tone="red">
+                        Needs git
+                      </span>
+                    )}
+                  </span>
                   <span className={styles.description}>{agent.description}</span>
                 </span>
                 <span className={styles.spec}>

@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useAgents, useRuns } from "../api/hooks";
 import { AgentIndex } from "../components/AgentIndex";
 import { Block, ListHead } from "../components/Block";
+import { GitMissingBanner } from "../components/GitMissingBanner";
 import { Launcher } from "../components/Launcher";
 import { LoadingIndicator } from "../components/Loading";
 import { RunList } from "../components/RunList";
@@ -12,17 +13,25 @@ export function HomePage() {
   const agents = useAgents();
   const runs = useRuns(6);
   const list = agents.data?.agents ?? [];
+  const gitAvailable = agents.data?.git_available ?? true;
+  const showGitWarning = !gitAvailable && list.some((a) => a.requires_git);
   const loading = agents.loading && !agents.data;
 
   return (
     <>
+      {showGitWarning && <GitMissingBanner />}
+
       {(loading || list.length > 0) && (
         <Block rule={false} level={1} label="New run" className={styles.launch}>
           <p className={styles.pitch}>
             Small agents that show their work. Every finding comes with the evidence behind it, so you can
             check it instead of taking its word.
           </p>
-          {loading ? <LoadingIndicator label="Loading agents" /> : <Launcher agents={list} />}
+          {loading ? (
+            <LoadingIndicator label="Loading agents" />
+          ) : (
+            <Launcher agents={list} gitAvailable={gitAvailable} />
+          )}
         </Block>
       )}
 
@@ -44,7 +53,7 @@ export function HomePage() {
               All agents
             </Link>
           </ListHead>
-          <AgentIndex agents={list} />
+          <AgentIndex agents={list} gitAvailable={gitAvailable} />
         </section>
       )}
 

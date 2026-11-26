@@ -324,3 +324,6 @@ class AgentInfo(_StrictModel):
         default=None, description="Input field filled by a positional CLI argument."
     )
     uses_llm: bool = Field(default=False, description="Whether runs normally call a model.")
+    requires_git: bool = Field(
+        default=False, description="Whether runs need git on PATH to read repositories."
+    )

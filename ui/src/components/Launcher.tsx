@@ -31,12 +31,14 @@ function saveLastAgent(id: string) {
   }
 }
 
-export function Launcher({ agents }: { agents: AgentInfo[] }) {
+export function Launcher({ agents, gitAvailable = true }: { agents: AgentInfo[]; gitAvailable?: boolean }) {
   const navigate = useNavigate();
-  // start on the agent used last time, so the launcher doesn't favour any one agent
+  const isAvailable = (a: AgentInfo) => !a.requires_git || gitAvailable;
+  // start on the agent used last time if it is usable, otherwise pick the first available agent
   const [agentId, setAgentId] = useState(() => {
     const last = readLastAgent();
-    return (agents.find((a) => a.id === last) ?? agents[0])?.id;
+    const remembered = agents.find((a) => a.id === last && isAvailable(a));
+    return (remembered ?? agents.find(isAvailable) ?? agents[0])?.id;
   });
   const [text, setText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,6 +53,7 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const agent = agents.find((a) => a.id === agentId);
+  const needsGit = Boolean(agent?.requires_git) && !gitAvailable;
   const primary = agent
     ? fieldsFromSchema(agent.input_schema, agent.primary_input).find((f) => f.primary)
     : undefined;
@@ -168,28 +171,39 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
             role="listbox"
             aria-label="Agent"
           >
-            {agents.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                role="option"
-                aria-selected={a.id === agent.id}
-                className={styles.option}
-                onClick={() => {
-                  setAgentId(a.id);
-                  saveLastAgent(a.id);
-                  menuRef.current?.hidePopover();
-                  setError(undefined);
-                  inputRef.current?.focus();
-                }}
-              >
-                <span className={styles.optionText}>
-                  <span className={styles.optionName}>{a.name}</span>
-                  <span className={styles.optionAbout}>{a.description}</span>
-                </span>
-                <Icon name="check" size={16} className={styles.optionCheck} />
-              </button>
-            ))}
+            {agents.map((a) => {
+              const disabled = Boolean(a.requires_git) && !gitAvailable;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  role="option"
+                  aria-selected={a.id === agent.id}
+                  disabled={disabled}
+                  className={styles.option}
+                  onClick={() => {
+                    setAgentId(a.id);
+                    saveLastAgent(a.id);
+                    menuRef.current?.hidePopover();
+                    setError(undefined);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  <span className={styles.optionText}>
+                    <span className={styles.optionName}>
+                      {a.name}
+                      {disabled && (
+                        <span className={`tag ${styles.optionTag}`} data-tone="red">
+                          Needs git
+                        </span>
+                      )}
+                    </span>
+                    <span className={styles.optionAbout}>{a.description}</span>
+                  </span>
+                  <Icon name="check" size={16} className={styles.optionCheck} />
+                </button>
+              );
+            })}
           </div>
         </span>
         {primary && <span className={styles.word}>on</span>}
@@ -240,7 +254,7 @@ export function Launcher({ agents }: { agents: AgentInfo[] }) {
           type="submit"
           size="l"
           trailingIcon={busy ? "spinner" : primary ? "enter" : "forward"}
-          disabled={busy}
+          disabled={busy || needsGit}
           className={styles.go}
         >
           {takesFile ? "Choose a file" : primary ? "Run" : "Open"}

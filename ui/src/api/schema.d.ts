@@ -268,6 +268,12 @@ export interface components {
              */
             primary_input?: string | null;
             /**
+             * Requires Git
+             * @description Whether runs need git on PATH to read repositories.
+             * @default false
+             */
+            requires_git: boolean;
+            /**
              * Uses Llm
              * @description Whether runs normally call a model.
              * @default false
@@ -280,6 +286,12 @@ export interface components {
         AgentList: {
             /** Agents */
             agents: components["schemas"]["AgentInfo"][];
+            /**
+             * Git Available
+             * @description Whether git was found on PATH for agents that inspect repositories.
+             * @default true
+             */
+            git_available: boolean;
             /**
              * Load Errors
              * @description Installed agents that failed to load, and why.
@@ -459,6 +471,19 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthStatus */
+        HealthStatus: {
+            /**
+             * Git Available
+             * @description Whether git was found on PATH for agents that inspect repositories.
+             * @default true
+             */
+            git_available: boolean;
+            /** Status */
+            status: string;
+            /** Version */
+            version: string;
         };
         /**
          * LLMSettingsUpdate
@@ -927,9 +952,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["HealthStatus"];
                 };
             };
         };

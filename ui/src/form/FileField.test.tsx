@@ -14,7 +14,8 @@ const agent: AgentInfo = {
   description: "Cleans a table.",
   version: "0.1.0",
   primary_input: "dataset",
-  uses_llm: false, // the model badge would fetch settings too
+  uses_llm: false,
+  requires_git: false, // the model badge would fetch settings too
   input_schema: {
     properties: {
       dataset: {

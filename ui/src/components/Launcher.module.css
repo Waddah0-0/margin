@@ -189,7 +189,12 @@
   text-align: left;
 }
 
-.option:hover,
+.option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.option:hover:not(:disabled),
 .option:focus-visible {
   background: var(--paper-sunk);
 }
@@ -202,7 +207,14 @@
 }
 
 .optionName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 650;
+}
+
+.optionTag {
+  font-weight: 600;
 }
 
 .optionAbout {

@@ -705,3 +705,31 @@ def test_the_file_store_removes_only_a_folder_it_made(tmp_path: Path) -> None:
     own = FileStore()
     own.close()
     assert not own.root.exists()
+
+
+def test_missing_git_disables_only_git_agents() -> None:
+    class GitOnlyAgent(EchoAgent):
+        id = "git-only"
+        name = "Git Only"
+        requires_git = True
+
+    reg = AgentRegistry([])
+    reg.register(EchoAgent)
+    reg.register(GitOnlyAgent)
+    app = create_app(registry=reg, llm_factory=no_model, git_check=lambda: False)
+    with TestClient(app, base_url="http://127.0.0.1") as c:
+        health = c.get("/health").json()
+        assert health["git_available"] is False
+
+        listed = c.get("/agents").json()
+        assert listed["git_available"] is False
+        by_id = {a["id"]: a for a in listed["agents"]}
+        assert by_id["git-only"]["requires_git"] is True
+        assert by_id["echo"]["requires_git"] is False
+
+        blocked = c.post("/agents/git-only/runs", json={"message": "hi"})
+        assert blocked.status_code == 422
+        assert "git" in blocked.json()["detail"].lower()
+
+        ok = c.post("/agents/echo/runs", json={"message": "hi"})
+        assert ok.status_code == 202

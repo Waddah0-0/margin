@@ -11,6 +11,7 @@ const agent = (id: string, extra: Partial<AgentInfo> = {}): AgentInfo => ({
   version: "0.1.0",
   primary_input: "target",
   uses_llm: false,
+  requires_git: false,
   input_schema: {
     properties: { target: { type: "string" }, depth: { type: "integer", default: 1 } },
     required: ["target"],
@@ -19,8 +20,10 @@ const agent = (id: string, extra: Partial<AgentInfo> = {}): AgentInfo => ({
   ...extra,
 });
 
-function renderIndex(agents: AgentInfo[]) {
-  const router = createMemoryRouter([{ path: "/", element: <AgentIndex agents={agents} /> }]);
+function renderIndex(agents: AgentInfo[], gitAvailable = true) {
+  const router = createMemoryRouter([
+    { path: "/", element: <AgentIndex agents={agents} gitAvailable={gitAvailable} /> },
+  ]);
   return render(<RouterProvider router={router} />);
 }
 
@@ -32,6 +35,14 @@ describe("AgentIndex", () => {
     expect(screen.getByText("01")).toBeTruthy();
     expect(screen.getByText("02")).toBeTruthy();
     expect(screen.getByText(/1 option · uses a model/)).toBeTruthy();
+  });
+
+  it("marks only git-dependent agents as needing git when git is unavailable", () => {
+    renderIndex([agent("repo", { requires_git: true }), agent("file", { requires_git: false })], false);
+    expect(screen.getAllByText("Needs git")).toHaveLength(1);
+    const links = screen.getAllByRole("link");
+    expect(links[0]?.getAttribute("data-unavailable")).toBe("true");
+    expect(links[1]?.getAttribute("data-unavailable")).toBeNull();
   });
 
   it("reads what an agent takes from its schema", () => {

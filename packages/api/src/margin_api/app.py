@@ -55,6 +55,19 @@ class AgentList(BaseModel):
     load_errors: dict[str, str] = Field(
         default_factory=dict, description="Installed agents that failed to load, and why."
     )
+    git_available: bool = Field(
+        default=True,
+        description="Whether git was found on PATH for agents that inspect repositories.",
+    )
+
+
+class HealthStatus(BaseModel):
+    status: str
+    version: str
+    git_available: bool = Field(
+        default=True,
+        description="Whether git was found on PATH for agents that inspect repositories.",
+    )
 
 
 class RunCreated(BaseModel):
@@ -211,11 +224,16 @@ def _default_llm(provider: str | None, model: str | None) -> LLMClient | None:
     return create_llm(provider, model)
 
 
+def _has_system_git() -> bool:
+    return shutil.which("git") is not None
+
+
 def create_app(
     *,
     registry: AgentRegistry | None = None,
     settings: ApiSettings | None = None,
     llm_factory: LLMFactory | None = _default_llm,
+    git_check: Callable[[], bool] = _has_system_git,
 ) -> FastAPI:
     settings = settings or load_settings()
     registry = registry or default_registry()
@@ -289,13 +307,17 @@ def create_app(
             input=run.input,
         )  # fmt: skip
 
-    @app.get("/health", tags=["meta"])
-    def health() -> dict[str, str]:
-        return {"status": "ok", "version": __version__}
+    @app.get("/health", response_model=HealthStatus, tags=["meta"])
+    def health() -> HealthStatus:
+        return HealthStatus(status="ok", version=__version__, git_available=git_check())
 
     @app.get("/agents", response_model=AgentList, tags=["agents"])
     def list_agents() -> AgentList:
-        return AgentList(agents=registry.list_agents(), load_errors=registry.load_errors)
+        return AgentList(
+            agents=registry.list_agents(),
+            load_errors=registry.load_errors,
+            git_available=git_check(),
+        )
 
     @app.get("/agents/{agent_id}", response_model=AgentInfo, tags=["agents"])
     def get_agent(agent_id: str) -> AgentInfo:
@@ -320,6 +342,12 @@ def create_app(
         ),
     ) -> RunCreated:
         cls = agent_class(agent_id)
+        if cls.requires_git and not git_check():
+            raise HTTPException(
+                422,
+                "This agent needs git, which was not found on PATH. "
+                "Install Git (https://git-scm.com/downloads) and restart margin.",
+            )
         run_id = uuid.uuid4().hex
         output_fields = fields_with_format(cls.InputModel.model_json_schema(), OUTPUT_FORMAT)
         sent = {k: v for k, v in body.items() if k not in output_fields}

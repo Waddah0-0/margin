@@ -218,7 +218,8 @@ class BaseAgent(ABC):
     primary_input: ClassVar[str | None] = None
     uses_llm: ClassVar[bool] = False
     """Whether runs normally call a model (the API queues these separately: one GPU)."""
-    """Input field filled by the CLI's positional argument (and shown first in forms)."""
+    requires_git: ClassVar[bool] = False
+    """Whether runs need ``git`` on PATH (used by the UI to disable them gracefully)."""
 
     def __init__(self, llm: LLMClient | None = None, config: Mapping[str, Any] | None = None):
         self.llm = llm
@@ -235,6 +236,7 @@ class BaseAgent(ABC):
             output_schema=cls.OutputModel.model_json_schema(),
             primary_input=cls.primary_input,
             uses_llm=cls.uses_llm,
+            requires_git=cls.requires_git,
         )
 
     @classmethod

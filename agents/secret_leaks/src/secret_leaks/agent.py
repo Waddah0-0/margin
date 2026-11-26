@@ -19,6 +19,7 @@ class SecretLeaksAgent(BaseAgent):
     OutputModel = SecretLeaksOutput
     primary_input = "target"
     uses_llm = False
+    requires_git = True
 
     async def run(self, input: SecretLeaksInput, ctx: RunContext) -> AgentResult:
         from secret_leaks.scanner import SCAN_FILTERS, scan_workspace

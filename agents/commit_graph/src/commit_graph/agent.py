@@ -71,6 +71,7 @@ class CommitGraphAgent(BaseAgent):
     OutputModel = CommitGraphOutput
     primary_input = "target"
     uses_llm = True  # to write the chapters; the graph and the findings never call a model
+    requires_git = True
 
     async def run(self, input: CommitGraphInput, ctx: RunContext) -> AgentResult:
         async with await ctx.load_workspace(

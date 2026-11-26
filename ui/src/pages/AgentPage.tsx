@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { useLocation, useParams } from "react-router";
 import { useAgents } from "../api/hooks";
 import { LinkButton } from "../components/Button";
+import { GitMissingBanner } from "../components/GitMissingBanner";
 import { PageLoading } from "../components/Loading";
 import { PageHead } from "../components/PageHead";
 import { EmptyState, ErrorState } from "../components/States";
@@ -15,6 +16,7 @@ export function AgentPage() {
   const location = useLocation();
   const agents = useAgents();
   const agent = agents.data?.agents.find((a) => a.id === agentId);
+  const gitAvailable = agents.data?.git_available ?? true;
   const loadError = agents.data?.load_errors?.[agentId];
   const Intro = agentIntroFor(agentId);
   usePageTitle(agent?.name ?? agentId);
@@ -38,6 +40,8 @@ export function AgentPage() {
     );
   }
 
+  const needsGit = Boolean(agent.requires_git) && !gitAvailable;
+
   return (
     <>
       <PageHead
@@ -54,7 +58,13 @@ export function AgentPage() {
           </>
         }
       />
-      <SchemaForm key={agent.id} agent={agent} initial={(location.state as FormValues | null) ?? undefined} />
+      {needsGit && <GitMissingBanner agentName={agent.name} />}
+      <SchemaForm
+        key={agent.id}
+        agent={agent}
+        initial={(location.state as FormValues | null) ?? undefined}
+        disabledReason={needsGit ? "Install Git and restart margin to run this agent." : undefined}
+      />
       {Intro && (
         <Suspense fallback={null}>
           <Intro agent={agent} />

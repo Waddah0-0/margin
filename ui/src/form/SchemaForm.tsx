@@ -33,7 +33,15 @@ export async function startRun(
 }
 
 /** The input form for any agent, generated from its JSON schema. */
-export function SchemaForm({ agent, initial }: { agent: AgentInfo; initial?: FormValues }) {
+export function SchemaForm({
+  agent,
+  initial,
+  disabledReason,
+}: {
+  agent: AgentInfo;
+  initial?: FormValues;
+  disabledReason?: string;
+}) {
   const navigate = useNavigate();
   const fields = useMemo(() => fieldsFromSchema(agent.input_schema, agent.primary_input), [agent]);
   const [values, setValues] = useState<FormValues>(() => ({ ...initialValues(fields), ...initial }));
@@ -57,6 +65,7 @@ export function SchemaForm({ agent, initial }: { agent: AgentInfo; initial?: For
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (disabledReason) return;
     setTouched(true);
     if (Object.keys(errors).length) return;
     setSubmitting(true);
@@ -135,7 +144,13 @@ export function SchemaForm({ agent, initial }: { agent: AgentInfo; initial?: For
           </p>
         )}
         <div className={styles.actions}>
-          <Button type="submit" size="l" icon={submitting ? "spinner" : "play"} disabled={submitting}>
+          <Button
+            type="submit"
+            size="l"
+            icon={submitting ? "spinner" : "play"}
+            disabled={submitting || Boolean(disabledReason)}
+            title={disabledReason}
+          >
             {submitting ? "Starting" : "Run"}
           </Button>
           <Button variant="text" onClick={reset} disabled={submitting}>

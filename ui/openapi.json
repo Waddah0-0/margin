@@ -39,6 +39,12 @@
             "description": "Input field filled by a positional CLI argument.",
             "title": "Primary Input"
           },
+          "requires_git": {
+            "default": false,
+            "description": "Whether runs need git on PATH to read repositories.",
+            "title": "Requires Git",
+            "type": "boolean"
+          },
           "uses_llm": {
             "default": false,
             "description": "Whether runs normally call a model.",
@@ -69,6 +75,12 @@
             },
             "title": "Agents",
             "type": "array"
+          },
+          "git_available": {
+            "default": true,
+            "description": "Whether git was found on PATH for agents that inspect repositories.",
+            "title": "Git Available",
+            "type": "boolean"
           },
           "load_errors": {
             "additionalProperties": {
@@ -432,6 +444,30 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthStatus": {
+        "properties": {
+          "git_available": {
+            "default": true,
+            "description": "Whether git was found on PATH for agents that inspect repositories.",
+            "title": "Git Available",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "HealthStatus",
         "type": "object"
       },
       "LLMSettingsUpdate": {
@@ -1437,11 +1473,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Health Health Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HealthStatus"
                 }
               }
             },
