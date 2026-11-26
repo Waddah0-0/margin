@@ -921,4 +921,56 @@
   });
 
   renderRunMode("cli");
+
+  /* ---- Latest Windows Installer Auto-Upgrade ------------------------------------------ */
+  const winLinks = document.querySelectorAll("[data-windows-download]");
+  const winMeta = document.querySelectorAll("[data-windows-meta]");
+  if (winLinks.length && typeof window.fetch === "function") {
+    fetch("https://api.github.com/repos/Waddah0-0/margin/releases/latest", {
+      headers: { Accept: "application/vnd.github+json" },
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (release) {
+        if (!release || !Array.isArray(release.assets)) return;
+        const installer = release.assets.find(function (asset) {
+          return (
+            asset &&
+            typeof asset.name === "string" &&
+            /^margin-setup-.*\.exe$/i.test(asset.name) &&
+            typeof asset.browser_download_url === "string"
+          );
+        });
+        if (!installer) return;
+
+        const tag = typeof release.tag_name === "string" ? release.tag_name : "";
+        const sizeMb =
+          typeof installer.size === "number" && installer.size > 0
+            ? Math.round(installer.size / (1024 * 1024)) + " MB"
+            : "";
+
+        winLinks.forEach(function (link) {
+          link.setAttribute("href", installer.browser_download_url);
+          link.removeAttribute("target");
+          link.setAttribute("download", installer.name);
+          if (tag) {
+            link.setAttribute("title", "Download " + installer.name + " (" + tag + ")");
+          }
+        });
+
+        const parts = ["Windows 10/11 (x64)"];
+        if (tag) parts.push(tag);
+        if (sizeMb) parts.push(sizeMb);
+        parts.push("Standalone installer");
+        const metaText = parts.join(" · ");
+
+        winMeta.forEach(function (el) {
+          el.textContent = metaText;
+        });
+      })
+      .catch(function () {
+        // Keep the default GitHub Releases link silently on network/rate-limit failure.
+      });
+  }
 })();

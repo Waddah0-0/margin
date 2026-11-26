@@ -323,9 +323,21 @@ pre {
   background: var(--surface-hover);
 }
 
+.btn-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+.download-meta {
+  margin: 16px auto 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
 /* Flat architectural install line — centered, no card, no scrollbar */
 .install-line {
-  margin: 30px auto 0;
+  margin: 24px auto 0;
   max-width: 540px;
   display: flex;
   align-items: center;
@@ -1317,6 +1329,28 @@ pre {
   justify-content: center;
 }
 
+.closing-meta {
+  margin: -14px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.closing-meta a {
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color var(--fast) var(--ease);
+}
+
+.closing-meta a:hover {
+  color: var(--blue);
+}
+
 .footer {
   border-top: 1px solid var(--hairline);
   padding: 32px 0 44px;
@@ -1667,6 +1701,16 @@ pre {
   .closing {
     padding: 88px 28px;
     gap: 26px;
+  }
+
+  .closing-meta {
+    margin-top: -10px;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .closing-sep {
+    display: none;
   }
 
   .btn {
