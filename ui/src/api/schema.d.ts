@@ -216,6 +216,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Updates */
+        get: operations["check_updates_updates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/updates/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Install Update */
+        post: operations["install_update_updates_install_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/uploads": {
         parameters: {
             query?: never;
@@ -812,6 +846,49 @@ export interface components {
              */
             output_tokens: number;
         };
+        /** UpdateInstallResult */
+        UpdateInstallResult: {
+            /** Installer Path */
+            installer_path: string;
+            /**
+             * Status
+             * @default started
+             * @constant
+             */
+            status: "started";
+            /** Version */
+            version: string;
+        };
+        /** UpdateStatus */
+        UpdateStatus: {
+            /** Asset Name */
+            asset_name?: string | null;
+            /**
+             * Can Install
+             * @description True when running in the desktop app and a Windows installer asset is ready.
+             * @default false
+             */
+            can_install: boolean;
+            /** Checksum Url */
+            checksum_url?: string | null;
+            /** Current Version */
+            current_version: string;
+            /** Download Url */
+            download_url?: string | null;
+            /** Latest Version */
+            latest_version?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Release Notes */
+            release_notes?: string | null;
+            /** Release Url */
+            release_url?: string | null;
+            /**
+             * Update Available
+             * @default false
+             */
+            update_available: boolean;
+        };
         /** Upload */
         Upload: {
             /** Name */
@@ -1270,6 +1347,79 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    check_updates_updates_get: {
+        parameters: {
+            query?: {
+                /** @description Bypass the 15-minute cache and check now. */
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    install_update_updates_install_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateInstallResult"];
+                };
+            };
+            /** @description In-app update is only available in the Windows desktop app */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No newer release with a Windows installer is available */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Failed to download or verify the update installer */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

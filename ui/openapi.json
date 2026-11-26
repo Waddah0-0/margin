@@ -1240,6 +1240,131 @@
         "title": "TokenUsage",
         "type": "object"
       },
+      "UpdateInstallResult": {
+        "properties": {
+          "installer_path": {
+            "title": "Installer Path",
+            "type": "string"
+          },
+          "status": {
+            "const": "started",
+            "default": "started",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "installer_path"
+        ],
+        "title": "UpdateInstallResult",
+        "type": "object"
+      },
+      "UpdateStatus": {
+        "properties": {
+          "asset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Name"
+          },
+          "can_install": {
+            "default": false,
+            "description": "True when running in the desktop app and a Windows installer asset is ready.",
+            "title": "Can Install",
+            "type": "boolean"
+          },
+          "checksum_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Url"
+          },
+          "current_version": {
+            "title": "Current Version",
+            "type": "string"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "release_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Notes"
+          },
+          "release_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Url"
+          },
+          "update_available": {
+            "default": false,
+            "title": "Update Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "current_version"
+        ],
+        "title": "UpdateStatus",
+        "type": "object"
+      },
       "Upload": {
         "properties": {
           "name": {
@@ -1892,6 +2017,81 @@
         "summary": "Test Connection",
         "tags": [
           "settings"
+        ]
+      }
+    },
+    "/updates": {
+      "get": {
+        "operationId": "check_updates_updates_get",
+        "parameters": [
+          {
+            "description": "Bypass the 15-minute cache and check now.",
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Bypass the 15-minute cache and check now.",
+              "title": "Force",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Updates",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/updates/install": {
+      "post": {
+        "operationId": "install_update_updates_install_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateInstallResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "In-app update is only available in the Windows desktop app"
+          },
+          "409": {
+            "description": "No newer release with a Windows installer is available"
+          },
+          "502": {
+            "description": "Failed to download or verify the update installer"
+          }
+        },
+        "summary": "Install Update",
+        "tags": [
+          "meta"
         ]
       }
     },

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import shutil
@@ -41,6 +42,12 @@ from margin_api.files import OUTPUT_FORMAT, FileStore, RunFile, fields_with_form
 from margin_api.jobs import NotWaitingError, Run, RunManager, RunStatus
 from margin_api.llm_settings import router as llm_settings_router
 from margin_api.settings import ApiSettings, load_settings
+from margin_api.updates import (
+    UpdateChecker,
+    UpdateInstallResult,
+    UpdateStatus,
+    download_installer,
+)
 
 logger = get_logger(__name__)
 
@@ -234,9 +241,13 @@ def create_app(
     settings: ApiSettings | None = None,
     llm_factory: LLMFactory | None = _default_llm,
     git_check: Callable[[], bool] = _has_system_git,
+    update_checker: UpdateChecker | None = None,
+    on_install_update: Callable[[Path], None] | None = None,
+    updates_dir: Path | None = None,
 ) -> FastAPI:
     settings = settings or load_settings()
     registry = registry or default_registry()
+    checker = update_checker or UpdateChecker()
     store = FileStore(settings.files_dir)
     manager = RunManager(
         registry,
@@ -310,6 +321,41 @@ def create_app(
     @app.get("/health", response_model=HealthStatus, tags=["meta"])
     def health() -> HealthStatus:
         return HealthStatus(status="ok", version=__version__, git_available=git_check())
+
+    @app.get("/updates", response_model=UpdateStatus, tags=["meta"])
+    async def check_updates(
+        force: bool = Query(default=False, description="Bypass the 15-minute cache and check now."),
+    ) -> UpdateStatus:
+        return await asyncio.to_thread(
+            checker.check, force=force, can_install=on_install_update is not None
+        )
+
+    @app.post(
+        "/updates/install",
+        status_code=202,
+        response_model=UpdateInstallResult,
+        tags=["meta"],
+        responses={
+            400: {"description": "In-app update is only available in the Windows desktop app"},
+            409: {"description": "No newer release with a Windows installer is available"},
+            502: {"description": "Failed to download or verify the update installer"},
+        },
+    )
+    async def install_update() -> UpdateInstallResult:
+        if on_install_update is None:
+            raise HTTPException(
+                400, "Automatic install is only available in the margin desktop app."
+            )
+        status = await asyncio.to_thread(checker.check, force=True, can_install=True)
+        if not status.update_available or not status.latest_version or not status.download_url:
+            raise HTTPException(409, "No newer Windows installer is available right now.")
+        dest = updates_dir or (store.root / "updates")
+        try:
+            installer = await asyncio.to_thread(download_installer, status, dest)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(502, f"Could not download update: {exc}") from exc
+        on_install_update(installer)
+        return UpdateInstallResult(version=status.latest_version, installer_path=str(installer))
 
     @app.get("/agents", response_model=AgentList, tags=["agents"])
     def list_agents() -> AgentList:

@@ -11,11 +11,13 @@ import ctypes
 import json
 import os
 import socket
+import subprocess
 import sys
 import threading
 import time
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 from margin_api.app import create_app
@@ -157,7 +159,40 @@ def main(argv: list[str] | None = None) -> int:
         ui_dir=str(ui_dir),
         files_dir=str(_desktop_files_dir()),
     )
-    app = create_app(settings=settings)
+    updates_dir = _desktop_root() / "updates"
+    active_window: list[Any] = []
+
+    def launch_update_installer(installer_path: Path) -> None:
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        subprocess.Popen(
+            [
+                str(installer_path),
+                "/SILENT",
+                "/CLOSEAPPLICATIONS",
+                "/RESTARTAPPLICATIONS",
+            ],
+            cwd=installer_path.parent,
+            creationflags=creationflags,
+            close_fds=True,
+        )
+
+        def close_soon() -> None:
+            time.sleep(0.4)
+            if active_window:
+                try:
+                    active_window[0].destroy()
+                except Exception:  # noqa: BLE001
+                    pass
+
+        threading.Thread(target=close_soon, name="margin-update-exit", daemon=True).start()
+
+    app = create_app(
+        settings=settings,
+        on_install_update=launch_update_installer if sys.platform == "win32" else None,
+        updates_dir=updates_dir,
+    )
     config = uvicorn.Config(
         app,
         host="127.0.0.1",
@@ -196,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
 
         import webview
 
-        webview.create_window(
+        window = webview.create_window(
             "margin",
             base_url,
             width=1280,
@@ -204,6 +239,7 @@ def main(argv: list[str] | None = None) -> int:
             min_size=(840, 600),
             background_color="#000000",
         )
+        active_window.append(window)
         webview.start(gui="edgechromium" if sys.platform == "win32" else None)
         return 0
     except Exception as exc:  # noqa: BLE001

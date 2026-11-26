@@ -8,6 +8,7 @@ import { useLoad } from "../api/hooks";
 import { useTheme } from "../lib/theme";
 import { Icon } from "./Icon";
 import styles from "./Shell.module.css";
+import { UpdateButton } from "./UpdateButton";
 
 const ITEMS = [
   { to: "/agents", label: "Agents" },
@@ -36,6 +37,7 @@ export function TopBar() {
           ))}
         </nav>
         <div className={styles.tools}>
+          <UpdateButton />
           <a className={styles.docs} href={`${API_URL}/docs`} target="_blank" rel="noreferrer">
             API docs
             <Icon name="open" size={12} />

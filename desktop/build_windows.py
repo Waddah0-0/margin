@@ -14,12 +14,15 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
+
+TIMESTAMP_URL = "http://timestamp.digicert.com"
 
 ROOT = Path(__file__).resolve().parent.parent
 DESKTOP = ROOT / "desktop"
@@ -171,6 +174,69 @@ def smoke_test_exe(exe: Path) -> None:
         raise RuntimeError(f"Smoke test failed with exit code {proc.returncode}")
 
 
+def find_signtool() -> Path | None:
+    on_path = shutil.which("signtool")
+    if on_path:
+        return Path(on_path)
+    kits = (
+        Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
+        / "Windows Kits"
+        / "10"
+        / "bin"
+    )
+    if kits.is_dir():
+        matches = sorted(kits.glob("10.*/x64/signtool.exe"), reverse=True)
+        if matches:
+            return matches[0]
+    return None
+
+
+def sign_binary(path: Path) -> bool:
+    """Sign ``path`` with Authenticode when certificate env vars are configured.
+
+    Supports either a PFX file (``WINDOWS_CERT_PFX_PATH`` + optional ``WINDOWS_CERT_PASSWORD``)
+    or a certificate thumbprint in the Windows store (``WINDOWS_CERT_SHA1``).
+    """
+    pfx = os.environ.get("WINDOWS_CERT_PFX_PATH", "").strip()
+    sha1 = os.environ.get("WINDOWS_CERT_SHA1", "").strip()
+    if not pfx and not sha1:
+        print(
+            f"Skipping code signing for {path.name} "
+            "(set WINDOWS_CERT_PFX_PATH or WINDOWS_CERT_SHA1 to sign)."
+        )
+        return False
+
+    signtool = find_signtool()
+    if signtool is None:
+        raise RuntimeError(
+            "Code signing was requested, but signtool.exe was not found. "
+            "Install the Windows 10/11 SDK or add signtool.exe to PATH."
+        )
+
+    cmd = [str(signtool), "sign", "/fd", "SHA256", "/tr", TIMESTAMP_URL, "/td", "SHA256"]
+    if pfx:
+        cmd += ["/f", pfx]
+        password = os.environ.get("WINDOWS_CERT_PASSWORD", "")
+        if password:
+            cmd += ["/p", password]
+    else:
+        cmd += ["/sha1", sha1]
+    cmd.append(str(path))
+
+    # Avoid printing the certificate password to CI logs.
+    print(f"$ signtool sign /fd SHA256 ... {path.name}", flush=True)
+    subprocess.run(cmd, check=True, text=True)
+    return True
+
+
+def write_sha256(path: Path) -> Path:
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    checksum = path.with_suffix(path.suffix + ".sha256")
+    checksum.write_text(f"{digest}  {path.name}\n", encoding="utf-8")
+    print(f"Wrote checksum: {checksum.name} ({digest[:12]}...)")
+    return checksum
+
+
 def build_installer(version: str) -> Path | None:
     iscc = find_iscc()
     if iscc is None:
@@ -195,6 +261,8 @@ def build_installer(version: str) -> Path | None:
         cwd=DESKTOP,
     )
     installer = INSTALLER_DIR / f"margin-setup-{version}.exe"
+    sign_binary(installer)
+    write_sha256(installer)
     print(f"\nBuilt Windows installer: {installer}")
     return installer
 
@@ -215,10 +283,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Build and smoke-test margin.exe without running Inno Setup.",
     )
+    parser.add_argument(
+        "--version",
+        default=None,
+        help="Override installer version (defaults to packages/api/pyproject.toml version).",
+    )
     args = parser.parse_args(argv)
 
     sys.path.insert(0, str(DESKTOP))
-    version = read_app_version()
+    version = str(args.version).lstrip("vV") if args.version else read_app_version()
     print(f"Building margin desktop {version} for Windows...")
 
     build_icon()
@@ -227,6 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     python = prepare_build_venv()
     exe = build_pyinstaller(python)
     smoke_test_exe(exe)
+    sign_binary(exe)
     if not args.skip_installer:
         build_installer(version)
     return 0

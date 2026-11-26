@@ -15,6 +15,8 @@ export type ProgressEvent = Schemas["ProgressEvent"];
 export type RunView = Schemas["RunView"];
 export type RunFile = Schemas["RunFile"];
 export type Upload = Schemas["Upload"];
+export type UpdateStatus = Schemas["UpdateStatus"];
+export type UpdateInstallResult = Schemas["UpdateInstallResult"];
 export type RunStatus = RunView["status"];
 export type JsonSchema = Record<string, unknown>;
 

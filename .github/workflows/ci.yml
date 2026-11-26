@@ -47,6 +47,8 @@ jobs:
         run: uv run python scripts/export_openapi.py --check
 
       - name: Run tests with Pytest
+        env:
+          MARGIN_DISABLE_UPDATE_CHECK: "1"
         run: uv run pytest
 
   ui:
@@ -131,4 +133,41 @@ jobs:
 
       - name: Build, check and smoke-test the packages, as a release would
         run: uv run python scripts/build_release.py
+
+  desktop:
+    name: Windows desktop app
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3
+        with:
+          version: "0.11.21"
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install UI dependencies
+        run: npm ci --prefix ui
+
+      - name: Build, smoke-test, and package Windows installer
+        env:
+          MARGIN_DISABLE_UPDATE_CHECK: "1"
+        run: uv run python desktop/build_windows.py
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: margin-windows-installer
+          retention-days: 7
+          path: |
+            build/desktop/installer/margin-setup-*.exe
+            build/desktop/installer/margin-setup-*.exe.sha256
 
