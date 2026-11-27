@@ -1504,17 +1504,19 @@ pre {
   }
 
   .hero {
-    padding: 52px 0 44px;
+    padding: 58px 0 48px;
   }
 
   .hero-title {
-    font-size: clamp(2.2rem, 9.2vw, 3.35rem);
-    line-height: 1.06;
+    font-size: clamp(2.85rem, 12.2vw, 3.85rem);
+    line-height: 1.02;
+    letter-spacing: -0.044em;
   }
 
   .hero-lead {
-    margin-top: 18px;
-    font-size: 16px;
+    margin-top: 20px;
+    max-width: 34ch;
+    font-size: 15px;
     line-height: 1.54;
   }
 
