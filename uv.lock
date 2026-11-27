@@ -408,7 +408,7 @@ wheels = [
 
 [[package]]
 name = "margin-ai-code-detector"
-version = "0.2.2"
+version = "0.2.3"
 source = { editable = "agents/ai_code_detector" }
 dependencies = [
     { name = "margin-core" },
@@ -427,7 +427,7 @@ requires-dist = [
 
 [[package]]
 name = "margin-api"
-version = "0.1.3"
+version = "0.1.5"
 source = { editable = "packages/api" }
 dependencies = [
     { name = "fastapi" },
@@ -478,7 +478,7 @@ requires-dist = [{ name = "margin-core", editable = "packages/core" }]
 
 [[package]]
 name = "margin-core"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "packages/core" }
 dependencies = [
     { name = "httpx" },
@@ -497,7 +497,7 @@ requires-dist = [
 
 [[package]]
 name = "margin-data-storyteller"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "agents/data_storyteller" }
 dependencies = [
     { name = "duckdb" },

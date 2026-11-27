@@ -4,7 +4,7 @@ All notable changes to this agent are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.3] - 2026-11-27
 
 ### Added
 - In story mode, `output_dir` also gets `<name>.pbip.zip`: a Power BI project with the

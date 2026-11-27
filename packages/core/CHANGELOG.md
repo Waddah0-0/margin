@@ -4,6 +4,14 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] - 2026-11-27
+
+### Added
+- `BaseAgent.requires_git` and `AgentInfo.requires_git`, so interfaces can flag agents that
+  need a working `git` executable.
+- `git_available()` in `margin_core.loaders.git` to check whether system `git` is installed
+  and runnable.
+
 ## [0.1.4] - 2026-11-20
 
 ### Fixed

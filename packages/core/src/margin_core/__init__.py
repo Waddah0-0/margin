@@ -45,7 +45,7 @@ from margin_core.models import (
 from margin_core.registry import AgentRegistry, default_registry, get_agent, list_agents
 from margin_core.runner import run_agent
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 __all__ = [
     "AgentInfo",

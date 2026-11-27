@@ -4,6 +4,20 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] - 2026-11-27
+
+### Added
+- `GET /health` reports `git_available`, and the bundled web UI shows a friendly banner when
+  system `git` is missing — disabling only repository agents while keeping Data Storyteller
+  usable.
+- Auto-update support: `GET /updates` checks GitHub Releases (cached for 15 minutes, disabled
+  with `MARGIN_DISABLE_UPDATE_CHECK=1`), and `POST /updates/install` downloads, SHA-256-verifies,
+  and launches the Windows installer in desktop mode. The bundled web UI shows an **Update**
+  button in the top bar with release notes on hover.
+
+### Changed
+- The bundled web UI's dark theme now uses true deep black (`#000000`).
+
 ## [0.1.3] - 2026-11-20
 
 ### Added
